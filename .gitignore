@@ -1,0 +1,9 @@
+# Claude Code personal state and local secrets
+CLAUDE.local.md
+.claude/settings.local.json
+.env
+.env.*
+
+# Local tooling
+node_modules/
+*.log

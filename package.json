@@ -1,0 +1,18 @@
+{
+  "name": "tracecheck",
+  "version": "2.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "build": "node src/site.mjs",
+    "check": "node --check src/site.mjs && node --check src/home-page.mjs && node --check src/brand.mjs && node --check src/icons.mjs && node --check src/check-page.mjs && node --check src/tools-page.mjs && node --check src/spring.js && node --check src/motion.js && node --check src/smoke-core.js && node --check src/smoke-worker.js && node --check src/hero3d.js && node --check src/hero3d/scene.js && node --check src/hero3d/worker.js && node --check scripts/hero3d-build.mjs && node --check src/site.js && node --check src/check.js && node --check src/field.js && node --check src/legal-docs.mjs && node --check server.mjs",
+    "springs": "node scripts/springs.mjs",
+    "hero3d": "node scripts/hero3d-build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "opentype.js": "2.0.0",
+    "three": "0.186.1"
+  }
+}
