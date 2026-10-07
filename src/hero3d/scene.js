@@ -165,9 +165,6 @@ export function createHero(canvas, {width, height, dpr = 1, quality = 2, debug =
     mesh.position.set(cx, 0, -DEPTH / 2);
     mesh.userData = {cx, index, ridge: ridgeFor(letter).map((v, k) => k % 2 ? v : v - totalW / 2 - cx)};
     word.add(mesh); letterMeshes.push(mesh);
-    const line = new LineSegments(outlines(new EdgesGeometry(geometry, 28)), xray);
-    line.renderOrder = 10;
-    mesh.add(line); edges.push(line);
   });
 
   /* Magnifying glass */
@@ -185,7 +182,9 @@ export function createHero(canvas, {width, height, dpr = 1, quality = 2, debug =
   handle.position.set(0, -R - R * .575, 0);
   const holder = new Group(); holder.add(lens, rim, handle);
   holder.rotation.z = MathUtils.degToRad(-32);
-  glass.add(holder);
+  // Owner, 2026-10-08: no magnifier in the scene. The glass group still exists (the overlay reads its position), but
+  // nothing is drawn in it, so there is no refraction pass and no x-ray either.
+  void holder;
 
   /* Lights: the environment does most of the work; a white rim from behind-top outlines the letters. */
   const rimLight = new DirectionalLight(0xffffff, 1.4); rimLight.position.set(-2, 3, -4); scene.add(rimLight);

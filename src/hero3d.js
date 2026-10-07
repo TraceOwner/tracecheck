@@ -280,8 +280,8 @@
       ctx.fillStyle = rgba(INK, .78); ctx.fillRect(lx, ly, w, 14);
       text(label, lx + 4, ly + 10.5, rgba(WHITE, 1));
     });
-    // Crosshair at the centre of the glass.
-    const [cx, cy] = info.lens;
+    // Crosshair at the pointer.
+    const {x: cx, y: cy} = ptr;
     ctx.lineWidth = 1.5; ctx.strokeStyle = rgba(WHITE, .95); ctx.beginPath();
     ctx.moveTo(cx - 14, cy); ctx.lineTo(cx - 5, cy); ctx.moveTo(cx + 5, cy); ctx.lineTo(cx + 14, cy);
     ctx.moveTo(cx, cy - 14); ctx.lineTo(cx, cy - 5); ctx.moveTo(cx, cy + 5); ctx.lineTo(cx, cy + 14); ctx.stroke();
