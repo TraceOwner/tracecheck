@@ -43,7 +43,12 @@
   /* ───── Poster: in the HTML from the start (discoverable, high priority, the LCP image) and placed by trace.css in
      units of the word's font size, so it never moves. If it fails to load, the plain word comes back. ───── */
   const poster = word.querySelector('.hero3d-poster');
+  // The scene waits for the poster's entrance (trace.css) to finish before it takes over.
+  let introDone = !poster || !poster.getAnimations?.().length;
+  const endIntro = () => { if (!introDone) { introDone = true; reveal(); } };
   if (poster) {
+    poster.addEventListener('animationend', endIntro);
+    setTimeout(endIntro, 2600);
     const lost = () => poster.remove();
     if (poster.complete && !poster.naturalWidth) lost(); else poster.addEventListener('error', lost);
   }
@@ -81,9 +86,11 @@
   // Once the page has scrolled, the poster and the scene no longer match (the letters have moved apart): the swap
   // waits until the page is back at the top or the hero is out of view.
   function reveal() {
-    if (!ready || revealed || stopped || narrow || (visible && scrollY > 8)) return;
+    if (!ready || !introDone || revealed || stopped || narrow || (visible && scrollY > 8)) return;
     revealed = true;
     stage.classList.add('is-live'); word.classList.add('is-3d');
+    // Once the poster has faded out, the letters wake: a ripple and a sweep of light (scene.js), drawn at full rate.
+    if (!woken) setTimeout(() => { woken = true; wakeUntil = performance.now() + 2200; post({type: 'wake'}); calmCheck(); }, 950);
   }
   function giveUp() {
     if (stopped) return;
@@ -191,13 +198,13 @@
 
   /* ───── Rate: about 60 a second while the pointer is in the hero, half that otherwise and while the page scrolls
      (the drift is slow; the GPU goes to the page). ───── */
-  let pointerAt = 0, calm = null, calmTimer = 0;
+  let pointerAt = 0, calm = null, calmTimer = 0, wakeUntil = 0, woken = false;
   function calmCheck() {
     const now = performance.now();
-    const active = now - pointerAt < 1500 && now - scrolling > 250;
+    const active = (now - pointerAt < 1500 && now - scrolling > 250) || now < wakeUntil;
     if (calm !== !active) { calm = !active; post({type: 'calm', on: calm}); }
     clearTimeout(calmTimer);
-    if (active || now - scrolling < 250) calmTimer = setTimeout(calmCheck, 260);
+    if (active || now - scrolling < 250 || now < wakeUntil) calmTimer = setTimeout(calmCheck, 260);
   }
 
   /* ───── Pointer: anywhere in the hero tilts the scene; over the word the letters answer it (scene.js) ───── */

@@ -98,6 +98,7 @@ onmessage = ({data}) => {
   else if (data.type === 'scroll') hero.scroll(data.p);
   else if (data.type === 'info') hero.wantInfo(data.on);
   else if (data.type === 'calm') calm = data.on;
+  else if (data.type === 'wake') hero.wake();
   // The page drops frames while the scene runs: one step down, whatever the scene's own timing says.
   else if (data.type === 'page-slow') { if (running) stepDown(); }
   else if (data.type === 'run') {

@@ -16,6 +16,7 @@ import glyphs from './glyphs.json';
 
 const UNIT = 1 / 1000;           // font units to world units
 const DEPTH = .3;                // extrusion depth, world units
+const WAKE = .85;                // length of each letter's tip in the wake ripple, seconds
 // The studio swings between -.32 and .06 rad: towards the positive side the left letters turn away from the softboxes
 // and go black (measured: 12% of the word bright at +.3 against 30% at -.3).
 const ENV_CENTER = -.13, ENV_SWING = .19;
@@ -115,7 +116,7 @@ export function createHero(canvas, {width, height, dpr = 1, quality = 2, debug =
 
   /* State */
   const S = {w: width, h: height, dpr, wordRect: null, ptr: {x: .5, y: .5, inside: false, hot: false}, scroll: 0,
-    yaw: 0, pitch: 0, sep: 0, time: 0, env: 0};
+    yaw: 0, pitch: 0, sep: 0, time: 0, env: 0, wake: -1e9};
   const v3 = new Vector3();
 
   function frame() {
@@ -160,12 +161,18 @@ export function createHero(canvas, {width, height, dpr = 1, quality = 2, debug =
       mesh.position.x = u.cx + k * S.sep * .28;
       mesh.position.z = -DEPTH / 2 - Math.abs(k) * S.sep * .5 + u.lift * DEPTH * .9;
       mesh.rotation.y = k * S.sep * .32 + clamp(dx / reach, -1, 1) * .2 * u.lift;
+      // Wake (once, when the scene takes over from the poster): a ripple runs through the letters, each one coming
+      // forward and back in turn.
+      const tw = S.time - S.wake - i * .11, wave = tw > 0 && tw < WAKE ? Math.sin(Math.PI * tw / WAKE) ** 2 : 0;
+      mesh.position.z += wave * DEPTH * 1.3;
       mesh.rotation.x = -clamp(dy / capH, -1, 1) * .14 * u.lift;
-      mesh.position.y = S.sep * (k % 2 ? .06 : -.04) * Math.abs(k) + u.lift * capH * .03;
+      mesh.position.y = S.sep * (k % 2 ? .06 : -.04) * Math.abs(k) + u.lift * capH * .03 + wave * capH * .05;
     });
     // Reflections drift by swinging the studio a little either way, not round in full: in most of a full turn the faces
     // look away from the softboxes and the word goes black.
-    scene.environmentRotation.y = ENV_CENTER + Math.sin(S.time * .11) * ENV_SWING + S.yaw * 1.5;
+    // During the wake the studio swings towards its brighter side and back: a wash of light runs over the word.
+    const tw = (S.time - S.wake) / 1.9, sweep = tw > 0 && tw < 1 ? -Math.sin(Math.PI * tw) * .28 : 0;
+    scene.environmentRotation.y = ENV_CENTER + Math.sin(S.time * .11) * ENV_SWING + S.yaw * 1.5 + sweep;
 
     const t0 = performance.now();
     composer.render();
@@ -179,6 +186,7 @@ export function createHero(canvas, {width, height, dpr = 1, quality = 2, debug =
     resize, step,
     pointer(x, y, inside, hot) { S.ptr.x = x; S.ptr.y = y; S.ptr.inside = inside; S.ptr.hot = hot; },
     scroll(p) { S.scroll = clamp(p); },
+    wake() { S.wake = S.time; },
     wantInfo() {},
     setQuality(q) { useBloom = q >= 1; bloom.enabled = useBloom; },
     letters: letterMeshes.length,

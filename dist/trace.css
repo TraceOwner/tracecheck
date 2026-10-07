@@ -377,10 +377,18 @@ dialog.is-open::backdrop{opacity:1}
    -8%…+108% of the 3D width and from .62 above to .14 below the baseline, like the bake in scripts/hero3d-build.mjs. */
 .hero3d-poster{display:none;position:absolute;left:calc(50% - 1.8215em);top:calc(28px - 1.1966em);width:3.6981em;height:2.4229em;max-width:none;pointer-events:none;user-select:none;transition:opacity .8s var(--ease-out)}
 /* With scripts on, the poster is the word; without them, or if it fails to load (hero3d.js removes it), the text is.
-   It is there from the first paint, out of focus, and rises into focus: no fade from transparent, which would hold the
-   largest paint (LCP) back to the end of the animation, 2.1 s instead of 0.3 s. */
-.js .hero3d-poster{display:block;animation:poster-rise 1.7s var(--spring-gentle) .22s backwards}
-@keyframes poster-rise{0%{transform:translate3d(0,14%,0) scale(1.03);filter:blur(16px)}}
+   Entrance: the word is swept out of the dark from left to right (a soft-edged mask moving across), rising and coming
+   into focus as it goes; a glint of light then runs over the chrome (::after below). */
+.js .hero3d-poster{display:block;-webkit-mask:linear-gradient(90deg,#000 45%,transparent 55%) 0 0/250% 100% no-repeat;mask:linear-gradient(90deg,#000 45%,transparent 55%) 0 0/250% 100% no-repeat;animation:poster-reveal 1.6s var(--ease-inout) .15s backwards}
+@keyframes poster-reveal{
+  0%{-webkit-mask-position:100% 0;mask-position:100% 0;transform:translate3d(0,5%,0) scale(1.06);filter:blur(10px) brightness(.6)}
+  55%{filter:blur(0) brightness(1.25)}
+  100%{-webkit-mask-position:0 0;mask-position:0 0;transform:none;filter:none}
+}
+/* The glint: a band of light confined to the letters by using the poster's own alpha as its mask. */
+.js .cinema-word::after{content:'';position:absolute;left:calc(50% - 1.8215em);top:calc(28px - 1.1966em);z-index:1;width:3.6981em;height:2.4229em;pointer-events:none;opacity:0;background:linear-gradient(100deg,#fff0 40%,#ffffff8c 50%,#fff0 60%) 100% 0/300% 100% no-repeat;mix-blend-mode:plus-lighter;-webkit-mask:url(hero-poster-960.webp) 0 0/100% 100% no-repeat;mask:url(hero-poster-960.webp) 0 0/100% 100% no-repeat;animation:word-glint 1.2s var(--ease-inout) 1.45s}
+@keyframes word-glint{0%,100%{opacity:1}0%{background-position:100% 0}100%{background-position:0 0}}
+.cinema-word.is-3d::after{display:none}
 .js .hero3d-poster+span{opacity:0;animation:none}
 .cinema-word.is-3d>span{opacity:0;animation:none}
 /* Hand-over: the canvas fades in under the poster (.3s), then the poster fades out over it, so the word never dims. */
@@ -390,7 +398,7 @@ dialog.is-open::backdrop{opacity:1}
 @supports (animation-timeline:scroll()){
   .hero3d-layer{animation:hero-word-away linear both;animation-timeline:scroll(root);animation-range:0px clamp(760px,100svh,1120px)}
 }
-@media(forced-colors:active){.hero3d,.js .hero3d-poster{display:none}.cinema-word>span{opacity:1!important}}
+@media(forced-colors:active){.hero3d,.js .hero3d-poster,.js .cinema-word::after{display:none}.cinema-word>span{opacity:1!important}}
 
 /* ───────────────────────── Home: sections ───────────────────────── */
 .display-m,.ecosystem-heading h2{font:420 var(--display-m)/1.03 var(--font-display);letter-spacing:var(--track-display)}
@@ -1058,6 +1066,7 @@ body::after{content:'';position:fixed;inset:0;z-index:80;pointer-events:none;opa
 .motion-paused :is([data-reveal]:not(.is-in),.title-ready:not(.title-in) .title-line){opacity:1}
 .motion-paused .cinema-copy,.motion-paused .cinema-word{transform:none;opacity:1;animation:none}
 .motion-paused .hero3d-layer{transform:none;animation:none}
+.motion-paused .cinema-word::after{animation:none}
 .motion-paused .site-header .brand-lockup,.motion-paused .bl,.motion-paused .brand-period{animation:none!important;opacity:1;transform:none;filter:none}
 /* Reduced motion: motion is replaced, not just switched off. Things fade in briefly; nothing travels, spins,
    zooms or loops. Pages cross-fade instead of moving. */
