@@ -94,8 +94,13 @@
       new ResizeObserver(() => this.item && this.moveTo(this.item, {immediate: true})).observe(container);
     }
     measure(item) {
-      const box = this.container.getBoundingClientRect(), rect = item.getBoundingClientRect();
+      // Layout boxes, not transformed ones: an item that is still rising or scaling into place (a list opening) would
+      // otherwise get a lens that is shifted and too small.
       const c = this.container;
+      let x = 0, y = 0, node = item;
+      while (node && node !== c && c.contains(node)) { x += node.offsetLeft; y += node.offsetTop; node = node.offsetParent; }
+      if (node === c) return {x, y, w: item.offsetWidth, h: item.offsetHeight};
+      const box = c.getBoundingClientRect(), rect = item.getBoundingClientRect();
       return {x: rect.left - box.left - c.clientLeft + c.scrollLeft, y: rect.top - box.top - c.clientTop + c.scrollTop, w: rect.width, h: rect.height};
     }
     moveTo(item, {immediate = false} = {}) {

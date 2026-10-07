@@ -173,16 +173,17 @@ export function createHero(canvas, {width, height, dpr = 1, quality = 2, debug =
   /* Magnifying glass */
   const glass = new Group(); scene.add(glass);
   const R = capH * .62;
-  const lens = new Mesh(lensGeometry(R * .94, R * .34), new MeshPhysicalMaterial({
-    color: 0xffffff, metalness: 0, roughness: .02, transmission: 1, thickness: R * .6, ior: 1.6, specularIntensity: .45,
-    envMapIntensity: .35, attenuationColor: new Color(0x8a929c), attenuationDistance: .35, transparent: false
+  // A plain magnifier: a thin flat glass, a hairline steel ring and a slim straight handle; no collar, no gloss coat,
+  // so it reads as a line drawing in metal rather than a prop.
+  const lens = new Mesh(lensGeometry(R * .97, R * .12), new MeshPhysicalMaterial({
+    color: 0xffffff, metalness: 0, roughness: .02, transmission: 1, thickness: R * .2, ior: 1.45, specularIntensity: .3,
+    envMapIntensity: .25, attenuationColor: new Color(0x9aa1aa), attenuationDistance: .6, transparent: false
   }));
-  const rim = new Mesh(new TorusGeometry(R, R * .07, 24, 128), new MeshPhysicalMaterial({color: 0xd9dce0, metalness: 1, roughness: .16, clearcoat: .6, envMapIntensity: 1.3}));
-  const ferrule = new Mesh(new CylinderGeometry(R * .085, R * .085, R * .26, 32), rim.material);
-  ferrule.position.set(0, -R - R * .13, 0);
-  const handle = new Mesh(new CylinderGeometry(R * .07, R * .095, R * 1.25, 40), new MeshPhysicalMaterial({color: 0x0b0c0e, metalness: .2, roughness: .55, clearcoat: .4, clearcoatRoughness: .4}));
-  handle.position.set(0, -R - R * .26 - R * .62, 0);
-  const holder = new Group(); holder.add(lens, rim, ferrule, handle);
+  const steel = new MeshPhysicalMaterial({color: 0xc9ccd1, metalness: 1, roughness: .32, envMapIntensity: .9});
+  const rim = new Mesh(new TorusGeometry(R, R * .026, 16, 160), steel);
+  const handle = new Mesh(new CylinderGeometry(R * .034, R * .034, R * 1.15, 24), steel);
+  handle.position.set(0, -R - R * .575, 0);
+  const holder = new Group(); holder.add(lens, rim, handle);
   holder.rotation.z = MathUtils.degToRad(-32);
   glass.add(holder);
 

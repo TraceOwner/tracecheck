@@ -1,5 +1,5 @@
 import {toolIcon} from "./tool-icons.mjs";
-import {arrow,arrowDown} from "./icons.mjs";
+import {arrow} from "./icons.mjs";
 
 // One row per method: what it reads, whether it needs admin rights, where the result ends up.
 // Every cell states a fact that the command or the checklist on check.html actually does.
@@ -19,7 +19,7 @@ export const homePage = `
     <div class="cinema-actions"><a class="button button-light" href="check.html"><span class="button-label"><span data-label="Открыть проверку">Открыть проверку</span></span>${arrow}</a><a class="cinema-text-link" href="methodology.html">Как читать результат ${arrow}</a></div>
   </div>
   <div class="cinema-word" aria-hidden="true"><img class="hero3d-poster" src="hero-poster.webp" srcset="hero-poster-960.webp 960w, hero-poster.webp 1914w, hero-poster-2870.webp 2870w" sizes="(max-width: 720px) 102vw, calc(3.7 * clamp(180px, min(26.6vw, 38vh), 460px))" alt="" width="1914" height="1254" fetchpriority="high" decoding="async"><span data-text="TRACE">TRACE</span></div>
-  <div class="hero-floor container"><span>Данные остаются на вашем ПК</span><a class="scroll-cue" href="#methods">Способы проверки <span class="scroll-cue-icon" aria-hidden="true">${arrowDown}</span></a></div>
+  
 </section>
 <section id="methods" class="methods container" aria-labelledby="methods-title">
   <header class="methods-head"><p class="eyebrow">Способы проверки</p><h2 id="methods-title" class="display-m">Три способа<br><em>проверить ПК.</em></h2><p>Команда показана на странице целиком. Сначала прочитайте её, потом запускайте.</p></header>
