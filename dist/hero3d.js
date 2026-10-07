@@ -1,8 +1,7 @@
 'use strict';
-/* TRACE hero in 3D. The word is extruded in dark chrome with a magnifying glass in front; through the lens the
-   letters show their outlines, like an x-ray. Pointing at the word turns the glass into a scope: it follows the
-   pointer and a small cheat-client overlay appears (an ESP box on the nearest letter, three handles that run along
-   the strokes of neighbouring letters with live coordinates, a crosshair). Scrolling pulls the letters apart.
+/* TRACE hero in 3D. The word is extruded in dark chrome; reflections drift across it. Pointing at the word lifts
+   the letter under the pointer towards you and a light follows the pointer over the metal. Scrolling pulls the
+   letters apart.
 
    The scene renders in a module Worker on an OffscreenCanvas (hero3d-worker.js → hero3d-scene.js). A still poster
    of the same composition (hero-poster.webp) is in the page from the start; the scene fades in under it and the
@@ -63,13 +62,11 @@
   const stage = document.createElement('div');
   stage.className = 'hero3d'; stage.setAttribute('aria-hidden', 'true');
   const canvas = document.createElement('canvas'); canvas.className = 'hero3d-canvas';
-  const hud = document.createElement('canvas'); hud.className = 'hero3d-hud';
   // The stage stays put and carries the fade mask at the bottom of the hero; the layer inside moves with the word's
   // parallax, so the mask never travels down with it and cuts the letters.
   const layer = document.createElement('div'); layer.className = 'hero3d-layer';
-  layer.append(canvas, hud); stage.append(layer);
+  layer.append(canvas); stage.append(layer);
   hero.prepend(stage);
-  const ctx = hud.getContext('2d');
 
   let worker = null, ready = false, revealed = false, stopped = false, running = false, started = false;
   let paused = ui?.motionStopped() ?? false, visible = true, modal = false;
@@ -78,7 +75,6 @@
 
   function onMessage(data) {
     if (data.type === 'ready') { ready = true; reveal(); }
-    else if (data.type === 'info') { info = data.info; if (hudOn) drawHud(); }
     else if (data.type === 'give-up' || data.type === 'lost') giveUp();
   }
   // The scene fades in under the poster, then the poster fades out (trace.css), so the word never dims in between.
@@ -95,7 +91,7 @@
     post({type: 'run', on: false});
     // The poster comes back over the last frame first; the canvas goes once it is covered.
     word.classList.remove('is-3d');
-    stopMonitor(); hudOn = false; clearHud();
+    stopMonitor(); hudOn = false;
     setTimeout(() => {
       stage.remove();
       if (worker) { worker.postMessage({type: 'dispose'}); const w = worker; setTimeout(() => w.terminate(), 200); worker = null; }
@@ -104,7 +100,7 @@
   [reduceQuery, forcedQuery].forEach(query => query.addEventListener?.('change', () => { if (!allowed()) giveUp(); }));
   narrowQuery.addEventListener?.('change', () => {
     narrow = narrowQuery.matches;
-    if (narrow && revealed) { revealed = false; stage.classList.remove('is-live'); word.classList.remove('is-3d'); hudOn = false; clearHud(); }
+    if (narrow && revealed) { revealed = false; stage.classList.remove('is-live'); word.classList.remove('is-3d'); hudOn = false; }
     if (!narrow && !worker && started) { startWorker(); calmCheck(); }
     gate(); reveal();
   });
@@ -119,7 +115,6 @@
       worker.onmessage = ({data}) => onMessage(data);
       worker.onerror = () => giveUp();
       post({type: 'init', w: g.w, h: g.h, word: g.word, dpr: dpr(), scroll: progress(), debug, canvas: surface}, [surface]);
-      sizeHud();
       gate();
     } catch { giveUp(); }
   }
@@ -167,7 +162,6 @@
   }
 
   /* ───── Size, scroll ───── */
-  function sizeHud() { const r = dpr(); hud.width = Math.round(geo.w * r); hud.height = Math.round(geo.h * r); }
   let sizeFrame = 0;
   new ResizeObserver(() => {
     cancelAnimationFrame(sizeFrame);
@@ -177,7 +171,6 @@
       // A hero with no size (a window being resized to nothing, a hidden tab in some browsers) would hand the GPU
       // empty buffers.
       if (g.w < 2 || g.h < 2 || g.word.width < 2) return;
-      sizeHud();
       post({type: 'resize', w: g.w, h: g.h, dpr: dpr(), word: g.word});
     });
   }).observe(hero);
@@ -207,8 +200,8 @@
     if (active || now - scrolling < 250) calmTimer = setTimeout(calmCheck, 260);
   }
 
-  /* ───── Pointer: anywhere in the hero tilts the scene; over the word the glass becomes a scope ───── */
-  let hudOn = false, info = null, ptr = {x: 0, y: 0}, hudFade = 0, fadeJob = null;
+  /* ───── Pointer: anywhere in the hero tilts the scene; over the word the letters answer it (scene.js) ───── */
+  let hudOn = false;
   function onPointer(event) {
     if (event.pointerType === 'touch' || stopped) return;
     // Canvas coordinates: the stage moves with the parallax, the same as the word.
@@ -216,78 +209,16 @@
     const x = event.clientX - h.left, y = event.clientY - h.top, pad = r.height * (hudOn ? .3 : .12);
     const overUi = !!event.target.closest?.('a,button');
     const hot = revealed && !overUi && event.clientX > r.left - pad && event.clientX < r.right + pad && event.clientY > r.top - pad && event.clientY < r.bottom + pad;
-    ptr = {x, y};
     pointerAt = performance.now(); calmCheck();
     post({type: 'pointer', x: x / h.width, y: y / h.height, inside: true, hot});
-    if (hot !== hudOn) { hudOn = hot; post({type: 'info', on: hot}); fade(); }
+    hudOn = hot;
   }
   hero.addEventListener('pointermove', onPointer, {passive: true});
   hero.addEventListener('pointerleave', () => {
     post({type: 'pointer', x: .5, y: .5, inside: false, hot: false});
     pointerAt = 0; calmCheck();
-    if (hudOn) { hudOn = false; post({type: 'info', on: false}); fade(); }
+    hudOn = false;
   });
-
-  // The overlay fades with a damped value on the page's ticker, then stops.
-  function fade() {
-    if (fadeJob) return;
-    fadeJob = ticker.add((now, dt) => {
-      hudFade += ((hudOn ? 1 : 0) - hudFade) * (1 - Math.exp(-(hudOn ? 12 : 9) * dt));
-      if (!hudOn && hudFade < .01) { hudFade = 0; fadeJob = null; clearHud(); return false; }
-      if (!info || !hudOn) drawHud();
-      if (hudOn && hudFade > .995) { fadeJob = null; return false; }
-    });
-  }
-
-  /* ───── Overlay drawing (CSS px) ───── */
-  const MONO = '500 10px "IBM Plex Mono", ui-monospace, Consolas, monospace';
-  const rgba = (c, a) => `rgba(${c},${a})`;
-  const WHITE = '255,255,255', BONE = '206,210,216', INK = '9,10,13';
-  function clearHud() { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, hud.width, hud.height); }
-  function text(str, x, y, color) { ctx.font = MONO; ctx.textAlign = 'left'; ctx.fillStyle = color; ctx.fillText(str, x, y); }
-  function drawHud() {
-    clearHud();
-    if (!info || hudFade < .01 || !geo) return;
-    const r = hud.width / Math.max(1, geo.w);
-    ctx.setTransform(r, 0, 0, r, 0, 0);
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-    ctx.globalAlpha = hudFade;
-    const wordBox = geo.word, letters = info.letters, L = letters[info.near];
-    // ESP box on the letter nearest to the scope, tagged with the letter, its place in the word and its size on screen.
-    if (L) {
-      const [x0, y0, x1, y1] = L, pad = 8, len = Math.max(10, Math.min(28, (y1 - y0) * .14));
-      ctx.lineWidth = 2; ctx.strokeStyle = rgba(WHITE, .95); ctx.beginPath();
-      ctx.moveTo(x0 - pad, y0 - pad + len); ctx.lineTo(x0 - pad, y0 - pad); ctx.lineTo(x0 - pad + len, y0 - pad);
-      ctx.moveTo(x1 + pad - len, y0 - pad); ctx.lineTo(x1 + pad, y0 - pad); ctx.lineTo(x1 + pad, y0 - pad + len);
-      ctx.moveTo(x1 + pad, y1 + pad - len); ctx.lineTo(x1 + pad, y1 + pad); ctx.lineTo(x1 + pad - len, y1 + pad);
-      ctx.moveTo(x0 - pad + len, y1 + pad); ctx.lineTo(x0 - pad, y1 + pad); ctx.lineTo(x0 - pad, y1 + pad - len);
-      ctx.stroke();
-      text(`${'TRACE'[info.near]}·${String(info.near + 1).padStart(2, '0')}  ${Math.round(x1 - x0)}×${Math.round(y1 - y0)}`, x0 - pad + 1, y0 - pad - 8, rgba(WHITE, 1));
-    }
-    // Handles: one per neighbouring letter, on its stroke, with coordinates on the word.
-    ctx.font = MONO;
-    const pts = info.handles || [];
-    ctx.setLineDash([3, 4]); ctx.lineWidth = 1; ctx.strokeStyle = rgba(BONE, .55); ctx.beginPath();
-    pts.forEach(([, x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); if (pts.length) ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
-    pts.forEach(([i, x, y]) => {
-      ctx.strokeStyle = rgba(WHITE, .8); ctx.strokeRect(x - 7.5, y - 7.5, 15, 15);
-      ctx.fillStyle = rgba(WHITE, 1); ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
-      const label = `${'TRACE'[i]} ${String(Math.round(x - wordBox.left)).padStart(4)},${String(Math.round(y - wordBox.top)).padStart(4)}`;
-      const w = ctx.measureText(label).width + 8;
-      const sides = [[x + 12, y - 7], [x - 7, y + 12], [x - 12 - w, y - 7], [x - 7, y - 26]];
-      const clear = ([sx, sy]) => Math.hypot(Math.max(sx - ptr.x, 0, ptr.x - sx - w), Math.max(sy - ptr.y, 0, ptr.y - sy - 14));
-      const [lx, ly] = sides.find(s => clear(s) > 34) || sides.reduce((a, s) => clear(s) > clear(a) ? s : a);
-      ctx.fillStyle = rgba(INK, .78); ctx.fillRect(lx, ly, w, 14);
-      text(label, lx + 4, ly + 10.5, rgba(WHITE, 1));
-    });
-    // Crosshair at the pointer.
-    const {x: cx, y: cy} = ptr;
-    ctx.lineWidth = 1.5; ctx.strokeStyle = rgba(WHITE, .95); ctx.beginPath();
-    ctx.moveTo(cx - 14, cy); ctx.lineTo(cx - 5, cy); ctx.moveTo(cx + 5, cy); ctx.lineTo(cx + 14, cy);
-    ctx.moveTo(cx, cy - 14); ctx.lineTo(cx, cy - 5); ctx.moveTo(cx, cy + 5); ctx.lineTo(cx, cy + 14); ctx.stroke();
-    ctx.fillStyle = rgba(WHITE, 1); ctx.fillRect(cx - 1.5, cy - 1.5, 3, 3);
-    ctx.globalAlpha = 1;
-  }
 
   /* ───── Start after first paint, when the main thread is idle: measure the page's refresh, then the scene ───── */
   const idle = window.requestIdleCallback || (cb => setTimeout(cb, 200));

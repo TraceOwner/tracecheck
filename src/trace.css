@@ -217,10 +217,10 @@ code{font-family:var(--font-mono)}
    timelines are missing. */
 body[data-page=home] .site-header .brand-lockup{opacity:var(--brand-p,1);transform:translate3d(0,calc((1 - var(--brand-p,1)) * 16px),0) scale(calc(1 + (1 - var(--brand-p,1)) * .16));transition:none}
 @supports (animation-timeline:scroll()){
-  body[data-page=home] .site-header .brand-lockup{animation:brand-settle linear both;animation-timeline:scroll(root);animation-range:36vh 64vh}
+  body[data-page=home] .site-header .brand-lockup{animation:brand-settle linear both;animation-timeline:scroll(root);animation-range:18vh 44vh}
   @keyframes brand-settle{from{opacity:0;transform:translate3d(0,12px,0) scale(1.12)}to{opacity:1;transform:none}}
-  body[data-page=home] .site-header .bl{animation:brand-letter linear both;animation-timeline:scroll(root);animation-range:calc(40vh + var(--i) * 3.5vh) calc(54vh + var(--i) * 3.5vh)}
-  body[data-page=home] .site-header .brand-period{animation:brand-dot linear both;animation-timeline:scroll(root);animation-range:58vh 70vh}
+  body[data-page=home] .site-header .bl{animation:brand-letter linear both;animation-timeline:scroll(root);animation-range:calc(22vh + var(--i) * 3.5vh) calc(36vh + var(--i) * 3.5vh)}
+  body[data-page=home] .site-header .brand-period{animation:brand-dot linear both;animation-timeline:scroll(root);animation-range:40vh 52vh}
 }
 /* Each document carries its title for readers without JavaScript (a <noscript> style shows all of them); with
    scripts the page heading shows the chosen one. */
@@ -313,7 +313,7 @@ dialog.is-open::backdrop{opacity:1}
 .island-text small{font:450 12.5px/1.25 var(--font-body);color:var(--text-2)}
 
 /* ───────────────────────── Home: hero ───────────────────────── */
-.cinema-hero{position:relative;isolation:isolate;display:flex;flex-direction:column;height:100svh;min-height:760px;max-height:1120px;padding-top:var(--header-h);overflow:hidden;background:#07090c;text-align:center;--scene:0}
+.cinema-hero{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:center;height:100svh;min-height:760px;max-height:1120px;padding-top:var(--header-h);overflow:hidden;background:#07090c;text-align:center;--scene:0}
 .cinema-art{position:absolute;inset:-3%;z-index:-3;background:url('hero-trace.jpg') center 54%/cover no-repeat;opacity:.16;animation:art-drift 34s var(--ease-inout) infinite alternate}
 .cinema-hero[data-atmosphere=webgl]>.cinema-art{opacity:.1}
 .cinema-vignette{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,#07090cf2 0%,#07090cc8 22%,#07090c33 60%,#07090c 100%)}
@@ -333,12 +333,12 @@ dialog.is-open::backdrop{opacity:1}
 .cinema-copy h1 .title-line:first-child{background-image:linear-gradient(102deg,#ffffff00 calc(var(--sheen) - 13%),#ffffffeb var(--sheen),#ffffff00 calc(var(--sheen) + 13%)),linear-gradient(180deg,#fbfcfd 0%,#f0f1f4 24%,#bdbec1 41%,#6b6c6f 49%,#424346 52%,#8f9093 60%,#dcdde0 76%,#f5f7f9 88%,#afb0b3 100%)}
 .cinema-copy h1 em{background-image:linear-gradient(102deg,#ffffff00 calc(var(--sheen) - 13%),#ffffff9c var(--sheen),#ffffff00 calc(var(--sheen) + 13%)),linear-gradient(180deg,#d3d4d7 0%,#b9babd 24%,#86878a 41%,#494a4d 49%,#2f3033 52%,#67686b 60%,#a3a4a7 76%,#c3c4c7 88%,#838487 100%)}
 .cinema-lead{max-width:540px;margin:0 auto;color:var(--text-2);font-size:17px;line-height:1.6}
-.cinema-actions{display:flex;justify-content:center;align-items:center;gap:30px;margin-top:clamp(22px,3.4vh,32px)}
+.cinema-actions{position:relative;z-index:5;display:flex;justify-content:center;align-items:center;gap:30px;margin-top:clamp(30px,5vh,56px)}
 .cinema-text-link{display:inline-flex;align-items:center;gap:8px;font:600 14.5px/1 var(--font-body);color:var(--text);padding:10px 2px;text-decoration:underline;text-decoration-color:#ffffff38;text-underline-offset:7px;transition:text-decoration-color .3s var(--ease-out),color .3s var(--ease-out)}
 .cinema-text-link:hover{color:#ffffff}
 .cinema-text-link .arrow{font-size:15px}
 /* The monolith sits on the floor of the scene; short windows crop its foot. */
-.cinema-word{position:relative;z-index:3;flex:none;margin-top:auto;margin-bottom:58px;padding-top:28px;pointer-events:none;font:800 clamp(180px,min(26.6vw,38vh),460px)/.8 var(--font-word);letter-spacing:-.055em;white-space:nowrap;transform:translate3d(0,calc(var(--scene)*110px),0)}
+.cinema-word{position:relative;z-index:3;flex:none;margin:0;padding-top:28px;pointer-events:none;font:800 clamp(200px,min(29vw,44vh),540px)/.8 var(--font-word);letter-spacing:-.055em;white-space:nowrap;transform:translate3d(0,calc(var(--scene)*110px),0)}
 /* Where scroll timelines exist the parallax runs on the compositor and follows the scroll offset exactly; site.js drives --scene only as a fallback. */
 @supports (animation-timeline:scroll()){
   .cinema-copy,.cinema-word{transform:none;opacity:1;animation:linear both;animation-timeline:scroll(root);animation-range:0px clamp(760px,100svh,1120px)}
@@ -374,9 +374,8 @@ dialog.is-open::backdrop{opacity:1}
 .hero3d-canvas,.hero3d-hud{position:absolute;inset:0;width:100%;height:100%;display:block}
 /* The poster box, in units of the word's font size (em): 3D word width 3.188em from the glyph advances, the DOM run 3.133em
    (centred), baseline .78em below the line top (line-height .8, ascender .98, descender .22); the poster spans
-   -8%…+108% of the 3D width and from .62 above to .14 below the baseline, like the bake in scripts/hero3d-build.mjs.
-   The mask repeats the canvas mask of .hero3d in poster coordinates: the hero ends 1.9966em + 58px below the poster top. */
-.hero3d-poster{display:none;position:absolute;left:calc(50% - 1.8215em);top:calc(28px - 1.1966em);width:3.6981em;height:2.4229em;max-width:none;pointer-events:none;user-select:none;transition:opacity .8s var(--ease-out);--fade-end:calc(1.9966em + 58px);-webkit-mask-image:linear-gradient(180deg,#000 calc(var(--fade-end) - .18 * clamp(760px,100svh,1120px)),transparent var(--fade-end));mask-image:linear-gradient(180deg,#000 calc(var(--fade-end) - .18 * clamp(760px,100svh,1120px)),transparent var(--fade-end))}
+   -8%…+108% of the 3D width and from .62 above to .14 below the baseline, like the bake in scripts/hero3d-build.mjs. */
+.hero3d-poster{display:none;position:absolute;left:calc(50% - 1.8215em);top:calc(28px - 1.1966em);width:3.6981em;height:2.4229em;max-width:none;pointer-events:none;user-select:none;transition:opacity .8s var(--ease-out)}
 /* With scripts on, the poster is the word; without them, or if it fails to load (hero3d.js removes it), the text is.
    It is there from the first paint, out of focus, and rises into focus: no fade from transparent, which would hold the
    largest paint (LCP) back to the end of the animation, 2.1 s instead of 0.3 s. */
@@ -1005,7 +1004,7 @@ body::after{content:'';position:fixed;inset:0;z-index:80;pointer-events:none;opa
   .cinema-copy h1{font-size:clamp(42px,11vw,64px)}
   .cinema-lead{font-size:15.5px}
   .cinema-actions{flex-direction:column;gap:14px}
-  .cinema-word{font-size:27.5vw;margin-bottom:90px}
+  .cinema-word{font-size:27.5vw}
   .night-statement,.final-cta{padding:84px 0}
   .night-foot{display:block}
   .night-foot .text-link{margin-top:18px}
