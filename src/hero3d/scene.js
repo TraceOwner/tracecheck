@@ -19,7 +19,8 @@ const DEPTH = .3;                // extrusion depth, world units
 // The studio swings between -.32 and .06 rad: towards the positive side the left letters turn away from the softboxes
 // and go black (measured: 12% of the word bright at +.3 against 30% at -.3).
 const ENV_CENTER = -.13, ENV_SWING = .19;
-const TORCH = 1.2;                // pointer light at full strength: a soft sheen, not a flare
+const TORCH = .045;                // pointer light at full strength: a soft sheen, not a flare
+const TORCH_Z = .6;               // its height above the front faces
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 // Frame-rate independent damping: the same feel at 60, 120 and 144 Hz.
 const damp = (current, target, lambda, dt) => current + (target - current) * (1 - Math.exp(-lambda * dt));
@@ -99,7 +100,7 @@ export function createHero(canvas, {width, height, dpr = 1, quality = 2, debug =
   const rimLight = new DirectionalLight(0xffffff, 1.4); rimLight.position.set(-2, 3, -4); scene.add(rimLight);
   const key = new DirectionalLight(0xffffff, .6); key.position.set(3, 2, 5); scene.add(key);
   // A small light that follows the pointer over the word: a highlight that slides across the metal.
-  const torch = new PointLight(0xffffff, 0, capH * 3, 2); torch.position.set(0, capH * .5, 1.5); scene.add(torch);
+  const torch = new PointLight(0xffffff, 0, TORCH_Z * 1.6, 2); torch.position.set(0, capH * .5, TORCH_Z); scene.add(torch);
 
   /* Post: bloom on the brightest highlights only */
   // No multisampling on the render target: on an integrated GPU it was the cost that turned scroll frames into 60-140 ms
@@ -119,7 +120,7 @@ export function createHero(canvas, {width, height, dpr = 1, quality = 2, debug =
   /* State */
   const S = {w: width, h: height, dpr, wordRect: null, ptr: {x: .5, y: .5, inside: false, hot: false}, scroll: 0,
     yaw: 0, pitch: 0, sep: 0, time: 0, env: 0};
-  const v3 = new Vector3();
+  const v3 = new Vector3(), faceN = new Vector3(), faceQ = new Vector3(), rayD = new Vector3(), hit = new Vector3();
 
   function frame() {
     // Fit: the front face of the word covers the DOM word box (wordRect), so the poster and the canvas line up.
@@ -145,7 +146,7 @@ export function createHero(canvas, {width, height, dpr = 1, quality = 2, debug =
   function step(now) {
     const dt = last ? Math.min(.05, (now - last) / 1000) : 1 / 60; last = now;
     S.time += dt;
-    const {worldPerPx} = frame();
+    const {worldPerPx, dist} = frame();
     const hot = S.ptr.hot, px = S.ptr.inside ? S.ptr.x : .5, py = S.ptr.inside ? S.ptr.y : .62;
     // The word tilts a little with the pointer; reflections drift on their own.
     const idle = S.ptr.inside ? 0 : 1;
@@ -168,8 +169,22 @@ export function createHero(canvas, {width, height, dpr = 1, quality = 2, debug =
     });
     S.torch = damp(S.torch || 0, hot ? 1 : 0, hot ? 8 : 4, dt);
     torch.intensity = S.torch * TORCH;
-    torch.position.x = damp(torch.position.x, ptrWorldX, 12, dt);
-    torch.position.y = damp(torch.position.y, ptrWorldY, 12, dt);
+    // A chrome face shows a point light where the view ray from the camera, mirrored on the face, meets the light. So
+    // the light goes along that mirrored ray from the point under the pointer: the sheen sits under the pointer even
+    // when the letter has come forward and turned (normal and front plane of the nearest letter, in world space).
+    word.updateMatrixWorld();
+    let nearest = letterMeshes[0];
+    letterMeshes.forEach(m => { if (Math.abs(ptrWorldX - m.userData.cx) < Math.abs(ptrWorldX - nearest.userData.cx)) nearest = m; });
+    faceN.set(0, 0, 1).transformDirection(nearest.matrixWorld);
+    faceQ.set(0, 0, DEPTH / 2 + .028).applyMatrix4(nearest.matrixWorld);
+    rayD.set(ptrWorldX, ptrWorldY, 0).sub(camera.position).normalize();
+    const along = faceN.dot(v3.copy(faceQ).sub(camera.position)) / Math.min(-1e-4, faceN.dot(rayD));
+    hit.copy(camera.position).addScaledVector(rayD, Math.abs(along));
+    rayD.addScaledVector(faceN, -2 * rayD.dot(faceN));
+    const lx = hit.x + rayD.x * TORCH_Z / Math.max(.2, rayD.z) , ly = hit.y + rayD.y * TORCH_Z / Math.max(.2, rayD.z);
+    torch.position.z = hit.z + TORCH_Z;
+    torch.position.x = damp(torch.position.x, lx, 30, dt);
+    torch.position.y = damp(torch.position.y, ly, 30, dt);
     // Reflections drift by swinging the studio a little either way, not round in full: in most of a full turn the faces
     // look away from the softboxes and the word goes black.
     scene.environmentRotation.y = ENV_CENTER + Math.sin(S.time * .11) * ENV_SWING + S.yaw * 1.5;
