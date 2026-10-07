@@ -19,7 +19,7 @@ const DEPTH = .3;                // extrusion depth, world units
 // The studio swings between -.32 and .06 rad: towards the positive side the left letters turn away from the softboxes
 // and go black (measured: 12% of the word bright at +.3 against 30% at -.3).
 const ENV_CENTER = -.13, ENV_SWING = .19;
-const TORCH = 2.2;                // pointer light at full strength
+const TORCH = 1.2;                // pointer light at full strength: a soft sheen, not a flare
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 // Frame-rate independent damping: the same feel at 60, 120 and 144 Hz.
 const damp = (current, target, lambda, dt) => current + (target - current) * (1 - Math.exp(-lambda * dt));
@@ -99,7 +99,7 @@ export function createHero(canvas, {width, height, dpr = 1, quality = 2, debug =
   const rimLight = new DirectionalLight(0xffffff, 1.4); rimLight.position.set(-2, 3, -4); scene.add(rimLight);
   const key = new DirectionalLight(0xffffff, .6); key.position.set(3, 2, 5); scene.add(key);
   // A small light that follows the pointer over the word: a highlight that slides across the metal.
-  const torch = new PointLight(0xffffff, 0, capH * 3, 2); torch.position.set(0, capH * .5, .9); scene.add(torch);
+  const torch = new PointLight(0xffffff, 0, capH * 3, 2); torch.position.set(0, capH * .5, 1.5); scene.add(torch);
 
   /* Post: bloom on the brightest highlights only */
   // No multisampling on the render target: on an integrated GPU it was the cost that turned scroll frames into 60-140 ms

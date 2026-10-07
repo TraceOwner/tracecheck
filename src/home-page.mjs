@@ -14,7 +14,6 @@ export const homePage = `
   <div class="cinema-vignette" aria-hidden="true"></div>
   <h1 id="hero-title" class="visually-hidden">TRACE — проверка на читы без установки</h1>
   <div class="cinema-word" aria-hidden="true"><img class="hero3d-poster" src="hero-poster.webp" srcset="hero-poster-960.webp 960w, hero-poster.webp 1914w, hero-poster-2870.webp 2870w" sizes="(max-width: 720px) 102vw, calc(3.7 * clamp(200px, min(29vw, 44vh), 540px))" alt="" width="1914" height="1254" fetchpriority="high" decoding="async"><span data-text="TRACE">TRACE</span></div>
-  <div class="cinema-actions"><a class="button button-light" href="check.html"><span class="button-label"><span data-label="Открыть проверку">Открыть проверку</span></span>${arrow}</a><a class="cinema-text-link" href="methodology.html">Как читать результат ${arrow}</a></div>
 </section>
 <section id="methods" class="methods container" aria-labelledby="methods-title">
   <header class="methods-head"><p class="eyebrow">Способы проверки</p><h2 id="methods-title" class="display-m">Три способа<br><em>проверить ПК.</em></h2><p>Команда показана на странице целиком. Сначала прочитайте её, потом запускайте.</p></header>
