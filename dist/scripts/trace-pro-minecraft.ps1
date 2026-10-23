@@ -294,6 +294,12 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
         'spoofer', 'hwid spoofer', 'hwidspoofer'
     )
 
+    # Общие слова и легитимные утилиты: совпадение с ними — находка низкой важности.
+    $weakKeywords = @(
+        'crypt', 'dream', 'impact', 'vega', 'rockstar', 'excellent', 'paladin', 'processhacker',
+        'systeminformer', 'dnspy', 'x64dbg', 'usbdeview', 'winprefetchview', 'hyperium'
+    )
+
     # Сигнатуры внутренних пакетов классов для глубокого анализа .jar
     $jarSignatures = @(
         'ru/nursultan', 'net/expensive', 'com/vape', 'celestial', 'deadcode',
@@ -354,8 +360,7 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
     }
 
     function Add-TraceHit([string]$source, [string]$name, [string]$path, [string]$detail, [string]$severity) {
-        # Общие слова и легитимные системные утилиты — находка низкой важности.
-        foreach ($term in @('crypt','dream','impact','vega','rockstar','excellent','paladin','processhacker','systeminformer','dnspy','x64dbg','usbdeview','winprefetchview','hyperium')) {
+        foreach ($term in $weakKeywords) {
             if ($name.EndsWith((': ' + $term), [StringComparison]::OrdinalIgnoreCase)) {
                 $severity = 'WARNING'
                 $detail += '; общее имя или легитимная утилита — возможное ложное совпадение'
@@ -502,7 +507,7 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
     }
 
     function Audit-RegistryTraces {
-        Write-Host "  [*] Сверка реестра Windows (BAM, UserAssist, RunMRU)..." -ForegroundColor DarkCyan
+        Write-Host "  [*] Сверка реестра Windows (BAM, UserAssist, RunMRU, AppCompat, MuiCache)..." -ForegroundColor DarkCyan
         
         # BAM / DAM (Запуск исполняемых файлов на уровне ядра)
         $bamKeys = @(
@@ -558,6 +563,24 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
                 foreach ($term in $cheatKeywords) {
                     if (Test-CheatKeywordMatch $val $term) {
                         Add-TraceHit "RUN_MRU" ("Команда Win+R: " + $term) $val "История окна Выполнить" "HIGH"
+                    }
+                }
+            }
+        }
+
+        # Compatibility Assistant и MuiCache: имена значений — пути EXE, которые запускались у этого пользователя.
+        $exeLists = @(
+            @{ Source = 'APPCOMPAT'; Path = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Compatibility Assistant\Store' },
+            @{ Source = 'MUICACHE'; Path = 'HKCU:\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache' }
+        )
+        foreach ($list in $exeLists) {
+            $key = Get-Item -LiteralPath $list.Path -ErrorAction SilentlyContinue
+            if (-not $key) { continue }
+            foreach ($valueName in $key.GetValueNames()) {
+                $exe = $valueName -replace '\.(FriendlyAppName|ApplicationCompany)$', ''
+                foreach ($term in $cheatKeywords) {
+                    if (Test-CheatKeywordMatch $exe $term) {
+                        Add-TraceHit $list.Source ("Запускавшийся EXE: " + $term) $exe "Путь из истории запуска программ" "HIGH"
                     }
                 }
             }

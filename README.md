@@ -7,13 +7,13 @@ TRACE — независимый сайт для добровольной лок
 ## Структура
 
 - `index.html` — обзор и прямые переходы к трём способам проверки.
-- `check.html` — адресные команды PowerShell/CMD для Minecraft, GTA V/RP и CS2, ориентиры по именам, источники, ручная проверка и локальный чек-лист.
+- `check.html` — команды PowerShell/CMD для Minecraft, GTA V RP и CS2 по задачам (процессы, Prefetch, реестр, корзина, Defender, автозапуск, журналы, hosts, папки игры, JAR, все диски или всё сразу), список искомых названий, ручная проверка и локальный чек-лист.
 - `methodology.html` — порядок оценки процессов, файлов и контрольных сумм; короткие ответы.
 - `projects.html` — ссылки на страницы Minecraft, FunTime, SpookyTime, ReallyWorld, HolyWorld, GTA5RP, Majestic и Counter-Strike 2. Упоминание не подтверждает партнёрство.
 - `tools.html` — инструкции и проверенные источники JournalTrace, Everything, System Informer, WinPrefetchView, Shellbag Analyzer, RegScanner, RecentFilesView, FunModAnalyzer и Ocean.
 - `legal.html?doc=...` — отдельные адреса для оферты, политики данных, согласия, правил и cookie.
 
-Исходники интерфейса лежат в `src/`, готовые файлы — в `dist/`. PowerShell и CMD скрипты остаются в `dist/scripts/`. Общие страницы собираются из `src/site.mjs`, главная — из `src/home-page.mjs`, рабочие страницы — из `src/check-page.mjs` и `src/tools-page.mjs`. Все стили — в `src/trace.css`. Пружинный движок анимаций — `src/spring.js`, поведение интерфейса — `src/site.js` и `src/check.js`, дым — `src/motion.js` (страница), `src/smoke-core.js` и `src/smoke-worker.js` (шейдер и Worker). 3D-слово на главной — `src/hero3d.js` (страница), `src/hero3d/scene.js` (сцена three.js), `src/hero3d/worker.js` (Worker), сборка — `scripts/hero3d-build.mjs`.
+Исходники интерфейса лежат в `src/`, готовые файлы — в `dist/`. PowerShell и CMD скрипты остаются в `dist/scripts/`. Общие страницы собираются из `src/site.mjs`, главная — из `src/home-page.mjs`, рабочие страницы — из `src/check-page.mjs` и `src/tools-page.mjs`. Все стили — в `src/trace.css`. Пружинный движок анимаций — `src/spring.js`, поведение интерфейса — `src/site.js` и `src/check.js`, команды проверки — `src/commands.js`, дым — `src/motion.js` (страница), `src/smoke-core.js` и `src/smoke-worker.js` (шейдер и Worker). 3D-слово на главной — `src/hero3d.js` (страница), `src/hero3d/scene.js` (сцена three.js), `src/hero3d/worker.js` (Worker), сборка — `scripts/hero3d-build.mjs`.
 
 ```text
 npm run build
@@ -50,7 +50,7 @@ npm run dev
 
 ## Скрипты и границы проверки
 
-PowerShell собирает имена, PID и доступные пути процессов. Расширенный сценарий может вычислять SHA-256 файлов `.exe`, `.dll`, `.asi`, `.jar` в выбранной пользователем папке; объём обхода ограничен. CMD сохраняет список процессов в CSV. Скрипты не используют сеть, требуют подтверждения и сохраняют файлы локально. Отсутствие подписи, путь или хеш без проверенного эталона не доказывают нарушение.
+Команды на странице ищут известные названия по одной задаче или по всем сразу и выводят находки в окно терминала; команда для CMD запускает тот же текст через `powershell -NoProfile -Command` одной строкой. Для Minecraft «Всё сразу» — сценарий TRACE-PRO, для GTA V RP и CS2 то же самое лежит в `dist/scripts/trace-gta.ps1` и `trace-cs2.ps1` (их пишет сборка). Общий `trace-check.ps1` может вычислять SHA-256 файлов `.exe`, `.dll`, `.asi`, `.jar` в выбранной пользователем папке; объём обхода ограничен. `trace-check.cmd` сохраняет список процессов в CSV. Скрипты не используют сеть, требуют подтверждения и сохраняют файлы локально. Отсутствие подписи, путь или хеш без проверенного эталона не доказывают нарушение.
 
 Команды на странице проверки — самостоятельная локальная диагностика, не часть официальной удалённой проверки. В частности, [ReallyWorld прямо запрещает проверяющему запускать CMD/PowerShell через AnyDesk](https://reallyworld.ru/anydesk). Поиск по имени файла или процесса не определяет факт читерства; конкретные правила серверов и версии клиентов нужно сверять отдельно. Страница инструментов ссылается только на сайты авторов программ и официальные правила FunTime/ReallyWorld.
 

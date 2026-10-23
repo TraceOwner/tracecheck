@@ -278,8 +278,7 @@
     '.methods-head > .eyebrow', '.methods-head > p',
     '.night-statement .eyebrow', '.night-foot',
     '.ecosystem-heading > .eyebrow', '.ecosystem-heading > p', '.ecosystem-all',
-    '.final-cta .button',
-    '.check-game-copy', '.game-picker', '.check-rail', '.check-main', '.check-aside',
+    '.check-rail', '.check-main',
     '.method-aside', '.section-title > .eyebrow', '.scope-body > .button', '.faq-list > details',
     '.projects-intro', '.projects-end .eyebrow', '.projects-end > .button',
     '.tools-rail', '.tools-alert', '.tools-source', '.legal-sidebar',
@@ -311,7 +310,7 @@
   addEventListener('pageshow', event => { if (event.persisted) revealAll(); });
 
   // Section headings resolve line by line; lines keep native kerning.
-  const headings = [...document.querySelectorAll('.methods-head h2, .ecosystem-heading h2, .section-title h2, .final-cta h2, .statement-title, .projects-end h2, .check-bottom h2')]
+  const headings = [...document.querySelectorAll('.methods-head h2, .ecosystem-heading h2, .section-title h2, .final-cta h2, .statement-title, .projects-end h2')]
     .filter(heading => !heading.closest('[data-reveal]'));
   headings.forEach(heading => {
     if (heading.querySelector(':scope > .title-line')) {
@@ -472,7 +471,7 @@
   });
 
   /* ───── A press leaves a drop of light where the finger landed ───── */
-  const rippleHosts = '.button, .header-start, .copy-button, .project-check, .tool-guide-source, .game-select-trigger, .tool-tab, .menu-links a, .depth-menu, .signal-name, .method-row, .motion-toggle';
+  const rippleHosts = '.button, .header-start, .copy-button, .project-check, .tool-guide-source, .game-select-trigger, .tool-tab, .task-chip, .menu-links a, .method-row, .motion-toggle';
   document.addEventListener('pointerdown', event => {
     const host = event.target.closest(rippleHosts);
     if (!host || event.button !== 0 || reduced()) return;

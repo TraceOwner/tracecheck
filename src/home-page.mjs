@@ -17,7 +17,7 @@ export const homePage = `
 </section>
 <section id="methods" class="methods container" aria-labelledby="methods-title">
   <header class="methods-head"><p class="eyebrow">Способы проверки</p><h2 id="methods-title" class="display-m">Три способа<br><em>проверить ПК.</em></h2><p>Команда показана на странице целиком. Сначала прочитайте её, потом запускайте.</p></header>
-  <ul class="methods-list">${method('powershell','PowerShell','Самая подробная проверка','Процессы, папки игры, Prefetch. Для Minecraft ещё реестр, журналы Windows и классы внутри JAR','Работает без них. С правами администратора видит больше','Список совпадений в окне. Для Minecraft отчёт JSON и CSV, если выбрать пункт 5')}${method('cmd','CMD','Короткая команда','Запущенные процессы, папки игры, «Загрузки», Prefetch','Лучше запускать от имени администратора','Список совпадений в окне. Скачиваемый .cmd сохраняет список процессов в CSV')}${method('manual','Вручную','Без терминала','То, что вы откроете сами: Диспетчер задач, папку игры, свойства файлов','Не нужны','Чек-лист с вашими отметками в файле .txt')}</ul>
+  <ul class="methods-list">${method('powershell','PowerShell','Одна задача или всё сразу','Процессы, Prefetch, реестр, корзину, Defender, автозапуск, журналы, папки игры. Для Minecraft ещё классы внутри JAR','Работает без них. С правами администратора видит больше','Список находок в окне. Для Minecraft отчёт JSON и CSV, если выбрать пункт 5')}${method('cmd','CMD','Те же задачи из командной строки','Те же источники, что PowerShell: команда запускает его одной строкой','Лучше запускать от имени администратора','Список находок в окне. «Всё сразу» запускает скачанный файл .ps1')}${method('manual','Вручную','Без терминала','То, что вы откроете сами: Диспетчер задач, папку игры, свойства файлов','Не нужны','Чек-лист с вашими отметками в файле .txt')}</ul>
 </section>
 <section class="night-statement" aria-labelledby="principle-title">
   <div class="night-ghost" aria-hidden="true"><span>совпадение</span></div>
@@ -28,5 +28,5 @@ export const homePage = `
   <ul class="ecosystem-list">${game('minecraft','Minecraft','FunTime, SpookyTime, ReallyWorld, HolyWorld')}${game('gta','GTA V RP','GTA5RP, Majestic')}${game('cs2','Counter-Strike 2','Процессы, файлы игры, Prefetch')}</ul>
   <a class="text-link ecosystem-all" href="projects.html">Официальные сайты и правила серверов ${arrow}</a>
 </section>
-<section class="final-cta" aria-labelledby="final-title"><div class="container"><h2 id="final-title" class="display-l">Проверка начинается<br><em>с одной команды.</em></h2><a class="button button-light" href="check.html"><span class="button-label"><span data-label="Открыть проверку">Открыть проверку</span></span>${arrow}</a><p class="field-hint" aria-hidden="true"><span></span>Водите курсором, чтобы закрутить нити. Клик даёт толчок</p></div></section>
+<section class="final-cta" aria-labelledby="final-title"><div class="container"><h2 id="final-title" class="display-l">Проверка начинается<br><em>с одной команды.</em></h2></div></section>
 `;
