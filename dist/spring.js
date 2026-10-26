@@ -188,7 +188,9 @@
      The page itself must not jump: scroll anchoring is off while the layout changes, and when the page gets shorter
      than the place it is scrolled to, a spacer at its end keeps the scroll position and then shrinks while the window
      scrolls up by the same amount, so the bottom of the page rides down with the content instead of being clamped. */
-  const flip = {nodes: new Map(), motion: null, spacer: null, deficit: 0, top: 0, since: 0};
+  const flip = {nodes: new Map(), motion: null, spacer: null, deficit: 0, top: 0, since: 0, expect: 0};
+  // Instant, not the page's smooth scrolling: these calls hold the position frame by frame.
+  const scrollNow = top => { scrollTo({left: scrollX, top, behavior: 'instant'}); flip.expect = scrollY; };
   function flipSpacer() {
     if (!flip.spacer) {
       flip.spacer = document.createElement('div');
@@ -199,10 +201,13 @@
     return flip.spacer;
   }
   function flipFrame(p) {
+    // The page was scrolled by something other than the slide (the scrollbar, a key on a focused control, a jump
+    // link): the reader has the page, so the slide ends where it is going without pulling the scroll back.
+    if (flip.deficit && Math.abs(scrollY - flip.expect) > 2) { flip.motion?.stop(); flipDone(); return; }
     flip.nodes.forEach((delta, node) => { node.style.translate = Math.abs(delta * p) < .5 ? '' : `0 ${(delta * p).toFixed(2)}px`; });
     if (flip.deficit) {
       flip.spacer.style.height = `${(flip.deficit * p).toFixed(1)}px`;
-      scrollTo(scrollX, flip.top - flip.deficit * (1 - p));
+      scrollNow(flip.top - flip.deficit * (1 - p));
     }
   }
   function flipDone() {
@@ -237,13 +242,13 @@
     const natural = root.scrollHeight - spacer.offsetHeight;
     const deficit = Math.max(0, Math.round(y + innerHeight - natural));
     spacer.style.height = `${deficit}px`;
-    if (scrollY !== y) scrollTo(scrollX, y);
+    if (scrollY !== y) scrollNow(y);
     before.forEach((top, node) => {
       if (!node.isConnected || !node.getClientRects().length) return;
       const delta = top - node.getBoundingClientRect().top;
       if (Math.abs(delta) >= 1) flip.nodes.set(node, delta);
     });
-    flip.deficit = deficit; flip.top = y; flip.since = performance.now();
+    flip.deficit = deficit; flip.top = y; flip.since = performance.now(); flip.expect = scrollY;
     if (!flip.nodes.size && !deficit) { flipDone(); return; }
     flip.motion ??= new Motion({p: new Spring({duration: .62, bounce: 0, precision: .001})}, ({p}) => flipFrame(p), {onRest: () => flipDone()});
     flip.motion.springs.p.x = 1; flip.motion.springs.p.v = 0;
@@ -299,7 +304,7 @@
       s.borderRadius = '0'; this.content.style.transform = `translate3d(${M}px,${M}px,0)`;
     }
     edges(rect) { return {l: rect.x, t: rect.y, r: rect.x + rect.w, b: rect.y + rect.h}; }
-    snap(open) { this.open = open; this.motion.to({...this.edges(open ? this.target : this.from), c: +open}, {immediate: true}); }
+    snap(open) { if (!this.from) return; this.open = open; this.motion.to({...this.edges(open ? this.target : this.from), c: +open}, {immediate: true}); }
     set(open) {
       this.open = open;
       const goal = this.edges(open ? this.target : this.from), config = {};

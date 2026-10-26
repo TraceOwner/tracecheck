@@ -749,6 +749,9 @@ body[data-page=tools] .page-intro[data-atmosphere=fallback]::before{background:r
 .faq-icon{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;background:#ffffff08;box-shadow:inset 0 0 0 1px #ffffff17;font-size:15px;color:var(--text-2);transition:transform .7s var(--spring-bouncy),background-color .35s var(--ease-out),color .35s var(--ease-out)}
 .faq-list details[open]:not([data-closing]) .faq-icon{transform:rotate(135deg);background:#eff0f3;color:#131417}
 .faq-body{overflow:hidden}
+/* While a closed disclosure folds its copy away (site.js), its content slot stays painted; the real body stays hidden. */
+:is(.faq-list details,.names-panel).is-folding:not([open])::details-content{content-visibility:visible}
+:is(.faq-list details,.names-panel).is-folding:not([open])>:is(.faq-body,.names-body):not([aria-hidden]){display:none}
 .faq-body p{max-width:680px;padding:0 4px 24px;font-size:16px;line-height:1.7;color:var(--text-2)}
 
 /* ───────────────────────── Projects ───────────────────────── */

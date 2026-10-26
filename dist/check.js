@@ -434,7 +434,8 @@ let copyTimer;
 // does not move and the leaving label is never cut.
 function setCopyLabel(text,direction){
   const frame=copyLabel.parentElement;
-  if(!frame.style.width)frame.style.width=`${Math.ceil(frame.getBoundingClientRect().width)}px`;
+  // The layout width, not the box on screen: right after a click the button is still scaled down by :active.
+  if(!frame.style.width)frame.style.width=`${Math.ceil(parseFloat(getComputedStyle(frame).width))}px`;
   swapText(frame,copyLabel,text,direction);
 }
 function confirmCopy(detail){

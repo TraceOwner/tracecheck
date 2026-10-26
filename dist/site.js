@@ -393,7 +393,7 @@
     const summary = details.querySelector('summary'), body = details.querySelector('.faq-body, .names-body');
     if (!summary || !body) return;
     let ghost = null;
-    const dropGhost = () => { ghost?.remove(); ghost = null; };
+    const dropGhost = () => { ghost?.remove(); ghost = null; details.classList.remove('is-folding'); };
     summary.addEventListener('click', event => {
       if (reduced()) return;
       event.preventDefault();
@@ -404,7 +404,8 @@
         ghost.setAttribute('aria-hidden', 'true'); ghost.inert = true;
         ghost.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'));
         Object.assign(ghost.style, {position: 'absolute', left: `${box.left - frame.left}px`, top: `${box.top - frame.top}px`, width: `${box.width}px`, margin: '0', pointerEvents: 'none'});
-        morphHeight(details, () => { details.open = false; details.append(ghost); });
+        // A closed <details> does not paint its content; .is-folding keeps that slot visible for the copy (trace.css).
+        morphHeight(details, () => { details.open = false; details.classList.add('is-folding'); details.append(ghost); });
         const leaving = ghost;
         leaving.animate([{clipPath: 'inset(0 0 0 0)', opacity: 1, filter: 'blur(0)'}, {clipPath: `inset(0 0 ${box.height.toFixed(1)}px 0)`, opacity: 0, filter: 'blur(4px)'}], {duration: 420, easing: curves.inout, fill: 'forwards'})
           .finished.then(() => { if (ghost === leaving) dropGhost(); }, () => {});
