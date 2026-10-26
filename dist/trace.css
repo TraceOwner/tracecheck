@@ -151,9 +151,9 @@ code{font-family:var(--font-mono)}
 /* Compact controls keep their look but get a 44px tall hit area. */
 :is(.desktop-nav a,.motion-toggle,.legal-sidebar nav a,.tools-rail nav a)::before{content:'';position:absolute;left:0;right:0;top:50%;height:max(44px,100%);translate:0 -50%}
 /* Inline links in running text: a quiet rule that brightens on hover. */
-.tools-alert a,.legal-main article a,.tool-guide-secondary,.tools-source a{color:var(--text);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px;text-decoration-color:#ffffff45;transition:color .3s var(--ease-out),text-decoration-color .3s var(--ease-out)}
-.tools-alert a:hover,.legal-main article a:hover,.tool-guide-secondary:hover,.tools-source a:hover{color:#ffffff;text-decoration-color:currentColor}
-.tool-guide-secondary,.tools-source a{display:inline-flex;align-items:center;gap:6px;min-height:44px}
+.tools-alert a,.legal-main article a,.tools-source a{color:var(--text);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px;text-decoration-color:#ffffff45;transition:color .3s var(--ease-out),text-decoration-color .3s var(--ease-out)}
+.tools-alert a:hover,.legal-main article a:hover,.tools-source a:hover{color:#ffffff;text-decoration-color:currentColor}
+.tools-source a{display:inline-flex;align-items:center;gap:6px;min-height:44px}
 .footer-top nav a,.footer-bottom a{display:inline-flex;align-items:center;min-height:44px}
 
 /* Pointer-following light on useful surfaces only: it catches the edge, like a lamp on anodized metal. */
@@ -166,7 +166,9 @@ code{font-family:var(--font-mono)}
 .site-header{position:sticky;top:0;z-index:50;height:var(--header-h);margin-bottom:calc(var(--header-h)*-1);view-transition-name:site-header}
 .site-header::before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,#07090cf5,#07090cec);border-bottom:1px solid #ffffff12;box-shadow:0 12px 30px -20px #000000;opacity:0;transition:opacity .5s var(--ease-out)}
 .site-header[data-scrolled]::before{opacity:1}
-.header-inner{display:flex;align-items:center;gap:24px;height:100%}
+/* Three columns, so the nav stays centred whether or not the page shows the header button. */
+.header-inner{display:grid;grid-template-columns:minmax(max-content,1fr) auto minmax(max-content,1fr);align-items:center;gap:24px;height:100%}
+.header-inner>.brand-link{justify-self:start}
 .brand-link{display:inline-flex;align-items:center;flex:none;min-height:44px;border-radius:var(--r-sm)}
 .brand-lockup{display:inline-flex;align-items:center;gap:11px;transition:transform var(--dur-press) var(--spring-press)}
 .brand-word{display:inline-flex;font:700 20px/1 var(--font-brand);letter-spacing:-.075em;color:var(--text)}
@@ -184,12 +186,15 @@ code{font-family:var(--font-mono)}
 .desktop-nav a{position:relative;z-index:1;padding:9px 16px;border-radius:var(--r-pill);font:500 14px/1.2 var(--font-body);letter-spacing:-.012em;color:var(--text-2);white-space:nowrap;transition:color .3s var(--ease-out),transform .5s var(--spring-bouncy)}
 .desktop-nav a:hover{color:var(--text)}
 .desktop-nav a:active{transform:scale(.95);transition-duration:.12s}
-.desktop-nav a[aria-current]{color:#ffffff;background:#ffffff17;box-shadow:inset 0 1px 0 #ffffff16,inset 0 0 0 1px #ffffff14,0 6px 16px -8px #000000;view-transition-name:nav-current}
+.desktop-nav a[aria-current]{color:#ffffff;isolation:isolate}
+.nav-pill{position:absolute;inset:0;z-index:-1;border-radius:inherit;background:#ffffff17;box-shadow:inset 0 1px 0 #ffffff16,inset 0 0 0 1px #ffffff14,0 6px 16px -8px #000000;view-transition-name:nav-current}
+/* The footer nav reuses nav(): only the header one shows a pill. */
+.site-footer .nav-pill{display:none}
 /* Lenses (Lens in spring.js) cover their whole control and are clipped to the item from --lt/--lr/--lb/--ll/--lrad: they repaint, they never lay out.
    The 1px gap between the outer clip and the inner one is the rim. */
 .nav-lens{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;background:#ffffff14;clip-path:inset(var(--lt,0) var(--lr,100%) var(--lb,100%) var(--ll,0) round var(--lrad,0px))}
 .nav-lens::before{content:'';position:absolute;inset:0;background:#1a1b1e;clip-path:inset(calc(var(--lt,0px) + 1px) calc(var(--lr,100%) + 1px) calc(var(--lb,100%) + 1px) calc(var(--ll,0px) + 1px) round max(0px,calc(var(--lrad,0px) - 1px)))}
-.header-actions{display:flex;align-items:center;gap:10px;flex:none}
+.header-actions{display:flex;align-items:center;justify-content:end;gap:10px;grid-column:3}
 .header-start{position:relative;isolation:isolate;display:inline-flex;align-items:center;gap:9px;height:44px;padding:0 15px 0 18px;border-radius:var(--r-pill);background:linear-gradient(180deg,#fffdfa,#e1e2e5);color:#121316;font:600 14px/1 var(--font-body);letter-spacing:-.012em;white-space:nowrap;box-shadow:inset 0 1px 0 #ffffff,inset 0 -1px 0 #00000026,0 8px 24px -12px #d5d6d960;transition:transform var(--dur-bouncy) var(--spring-bouncy),box-shadow .45s var(--ease-out)}
 .header-start .arrow{font-size:15px}
 .header-start:hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 #ffffff,inset 0 -1px 0 #00000026,0 12px 30px -10px #d5d6d990}
@@ -226,7 +231,7 @@ body[data-page=home] .site-header .brand-lockup{opacity:var(--brand-p,1);transfo
    scripts the page heading shows the chosen one. */
 .legal-doc-title{display:none}
 /* Without JavaScript the check page cannot build a command: its controls are hidden and a note offers the scripts. */
-html:not(.js) :is(.check-main,.tool-tabs,.game-picker,.check-rail .rail-label){display:none}
+html:not(.js) :is(.check-main,.tool-tabs,.game-picker,.check-rail .rail-label,.menu-trigger){display:none}
 .check-noscript{padding-block:24px 48px;max-width:760px}
 .check-noscript h2{margin-bottom:12px}
 .check-noscript ul{display:grid;gap:10px;margin:16px 0;padding-left:1.2em}
@@ -249,7 +254,7 @@ dialog::backdrop{background:#050609b8;opacity:0;transition:opacity .4s var(--eas
 dialog.is-open::backdrop{opacity:1}
 /* Backdrop blur is the costliest effect on a surface that moves or resizes, so panels open without it and gain it once settled (is-settled, set by site.js); the glass is dark enough that the change reads as the background softening. */
 .trace-panel{position:fixed;margin:0;padding:0;border:0;border-radius:var(--r-xl);overflow:hidden;background:var(--glass-panel);box-shadow:inset 0 1px 0 #ffffff16,inset 0 0 0 1px #ffffff17,var(--shadow-panel);opacity:0;transform:translate(var(--from-x,0px),var(--from-y,0px)) scale(var(--from-scale,.6));transition:transform .32s var(--ease-in),opacity .24s var(--ease-in) .04s}
-.trace-panel.is-open{opacity:1;transform:none;transition:transform var(--dur-bouncy) var(--spring-bouncy),opacity .3s var(--ease-out)}
+.trace-panel.is-open{opacity:1;transform:none;transition:transform var(--dur-smooth) var(--spring-smooth),opacity .3s var(--ease-out)}
 .trace-panel.is-settled{-webkit-backdrop-filter:var(--blur-panel);backdrop-filter:var(--blur-panel)}
 /* The navigation menu opens out of the round trigger (Morph in spring.js):
    the dialog is only a frame positioned by site.js; .menu-body is the glass that grows. */
@@ -304,7 +309,7 @@ dialog.is-open::backdrop{opacity:1}
 .island{position:fixed;left:50%;bottom:max(26px,env(safe-area-inset-bottom));z-index:120;pointer-events:none;translate:-50% 0}
 .island-glass{position:relative;clip-path:inset(0 var(--side,0px) 0 var(--side,0px) round 29px);display:flex;align-items:center;height:58px;border-radius:29px;overflow:hidden;background:linear-gradient(180deg,#ffffff10,#ffffff04),#151619;box-shadow:inset 0 1px 0 #ffffff16,inset 0 0 0 1px #ffffff1a,0 22px 44px -20px #000000;transform-origin:50% 50%;will-change:transform,opacity,filter}
 .island-glass::before{content:none}
-.island-content{position:absolute;left:0;top:0;display:flex;align-items:center;gap:12px;height:58px;padding:0 22px 0 11px;white-space:nowrap}
+.island-content{position:absolute;left:0;top:0;translate:var(--side,0px) 0;display:flex;align-items:center;gap:12px;height:58px;padding:0 22px 0 11px;white-space:nowrap}
 .island-icon{display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:50%;background:radial-gradient(circle at 30% 25%,#e2e3e666,#c9cacd33 60%),#202124;box-shadow:inset 0 1px 0 #ffffff16,inset 0 0 0 1px #d5d6d950,0 0 22px #c9cacd40;color:#e7e8eb}
 .island-icon svg{width:20px;height:20px}
 .island-icon path{stroke-dasharray:20;stroke-dashoffset:var(--check,20)}
@@ -538,14 +543,14 @@ dialog.is-open::backdrop{opacity:1}
 /* Games: the name is the row; it slides a little when the row is pointed at (no weight change: that re-lays the text). */
 .ecosystem{display:grid;grid-template-columns:minmax(0,.6fr) minmax(0,1.4fr);gap:0 5%;padding-top:152px;padding-bottom:152px}
 .ecosystem-heading{align-self:start;position:sticky;top:calc(var(--header-h) + 40px)}
-.ecosystem-heading h2{margin:18px 0 24px;font-size:var(--display-s)}
+.ecosystem-heading h2{margin:18px 0 24px;font-size:clamp(36px,2.6vw + 6px,52px)}
 .ecosystem-all{grid-column:2;justify-self:start}
 .ecosystem-list{margin:0 0 28px;padding:0;list-style:none;border-top:1px solid var(--line-2)}
 .game-row{position:relative;isolation:isolate;display:grid;grid-template-columns:max-content minmax(0,1fr) 40px;align-items:center;gap:40px;padding:32px 10px 32px 2px;border-bottom:1px solid var(--line-2);transition:background-color .45s var(--ease-out)}
 .game-row::after{content:'';position:absolute;left:0;bottom:-1px;width:100%;height:1px;background:linear-gradient(90deg,var(--accent),#ffffff00 70%);transform:scaleX(0);transform-origin:left;transition:transform .9s var(--ease-out)}
 .game-row:hover{background:#ffffff05}
 .game-row:hover::after{transform:scaleX(1)}
-.game-name{display:block;white-space:nowrap;font:400 clamp(34px,3vw,52px)/1.05 var(--font-display);letter-spacing:-.025em;transition:transform .7s var(--spring-bouncy)}
+.game-name{display:block;white-space:nowrap;font:400 clamp(30px,2.5vw,44px)/1.05 var(--font-display);letter-spacing:-.025em;transition:transform .7s var(--spring-bouncy)}
 .game-row:hover .game-name{transform:translateX(10px)}
 .game-row small{font-size:14.5px;color:var(--text-2)}
 .final-cta{position:relative;isolation:isolate;overflow:hidden;padding:164px 0 172px;text-align:center;background:#0d0e11;border-top:1px solid var(--line)}
@@ -640,7 +645,13 @@ body[data-page=tools] .page-intro[data-atmosphere=fallback]::before{background:r
 .terminal-body{display:flex;gap:14px;max-height:300px;overflow:auto;padding:18px 18px 22px;color:#dddee1;scrollbar-width:thin;scrollbar-color:#ffffff26 transparent;overscroll-behavior:contain}
 .terminal-body.is-clipped{-webkit-mask-image:linear-gradient(180deg,#000000 calc(100% - 40px),transparent);mask-image:linear-gradient(180deg,#000000 calc(100% - 40px),transparent)}
 .terminal-body>span{flex:none;font:600 12.5px/1.8 var(--font-mono);white-space:nowrap;color:var(--accent)}
-.terminal-body code{display:block;min-width:0;font:400 12.5px/1.8 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.terminal-body code{display:block;min-width:0;font:400 12.5px/1.2 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere}
+/* Text lines keep their air; the TRACE art lines sit tight so the letters join. A one-line CMD command is drawn broken
+   where its source lines were, continuation lines indented: the breaks are generated, the copied text is one line. */
+.cmd-line{line-height:1.8}
+.cmd-art{line-height:1.2}
+.terminal-body code.is-oneline{padding-left:2ch;text-indent:-2ch}
+.terminal-body code.is-oneline .cmd-line:not(:last-child)::after{content:'\A'}
 .terminal-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px 11px 11px 18px;border-top:1px solid #ffffff10;font:500 12px/1.45 var(--font-mono);color:var(--text-3)}
 .copy-button{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:none;height:44px;padding:0 17px 0 14px;border-radius:var(--r-pill);background:linear-gradient(180deg,#ffffff1c,#ffffff09);box-shadow:inset 0 1px 0 #ffffff16,inset 0 0 0 1px #ffffff1c,0 8px 20px -10px #000000;font:560 13.5px/1 var(--font-body);letter-spacing:-.01em;color:#ffffff;white-space:nowrap;transition:transform var(--dur-bouncy) var(--spring-bouncy),background-color .35s var(--ease-out),box-shadow .45s var(--ease-out)}
 .copy-button:hover{background-color:#ffffff10;box-shadow:inset 0 1px 0 #ffffff16,inset 0 0 0 1px #ffffff2e,0 10px 24px -10px #000000}
@@ -652,7 +663,7 @@ body[data-page=tools] .page-intro[data-atmosphere=fallback]::before{background:r
 .copy-button.is-copied .glyph-copy__sheets{opacity:0;transform:scale(.5)}
 .copy-button.is-copied .glyph-copy__check{opacity:1;stroke-dashoffset:0;transition-delay:.06s}
 .copy-label-window{position:relative;display:block;height:16px;overflow:hidden}
-.copy-label{display:block;line-height:16px}
+.copy-label{display:block;line-height:16px;white-space:nowrap}
 .action-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}
 .action-row .button{min-height:48px;font-size:14.5px}
 .manual-help{padding:18px 22px;border-radius:var(--r-lg);background:linear-gradient(115deg,#c9cacd14,#ffffff03);box-shadow:inset 0 0 0 1px #d5d6d926,inset 3px 0 0 var(--accent)}
@@ -674,10 +685,11 @@ body[data-page=tools] .page-intro[data-atmosphere=fallback]::before{background:r
 .task-picker{min-width:0;margin:0;padding:0;border:0}
 .task-picker legend{float:left;width:100%}
 .task-grid{clear:both;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px}
+.task-grid:has(> :nth-child(11):last-child)>:first-child{grid-column:span 2}
 .task-chip{position:relative;display:flex;align-items:flex-start;gap:10px;min-height:58px;padding:11px 13px;border-radius:14px;background:#ffffff04;box-shadow:inset 0 0 0 1px #ffffff10;color:var(--text-2);cursor:pointer;user-select:none;transition:background-color .35s var(--ease-out),box-shadow .35s var(--ease-out),color .3s var(--ease-out)}
 .task-chip:hover{background:#ffffff08;box-shadow:inset 0 0 0 1px #ffffff21;color:var(--text)}
 .task-chip:has(input:checked){background:#c9cacd12;box-shadow:inset 0 0 0 1px #d5d6d966,0 10px 24px -16px #000000;color:#ffffff}
-.task-chip:has(input:focus-visible){outline:2px solid var(--focus);outline-offset:2px}
+.task-chip:has(input:focus-visible){outline:2px solid var(--focus);outline-offset:3px;animation:focus-ring .5s var(--spring-bouncy)}
 .task-chip input{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
 .task-dot{flex:none;width:8px;height:8px;margin-top:6px;border-radius:50%;background:#ffffff24;transition:background-color .35s var(--ease-out),box-shadow .35s var(--ease-out),transform .6s var(--spring-bouncy)}
 .task-chip:has(input:checked) .task-dot{background:var(--accent);box-shadow:0 0 10px var(--accent);transform:scale(1.15)}
@@ -686,7 +698,7 @@ body[data-page=tools] .page-intro[data-atmosphere=fallback]::before{background:r
 .task-copy small{font-size:12px;line-height:1.4;color:var(--text-3)}
 .task-about{max-width:680px;margin:18px 0;font-size:15px;line-height:1.6;color:var(--text-2)}
 .task-hint{margin-top:12px;font-size:14px;line-height:1.55;color:var(--text-2)}
-.names-panel{margin-top:30px;border-block:1px solid var(--line)}
+.names-panel{position:relative;margin-top:30px;border-block:1px solid var(--line)}
 .names-panel summary{display:flex;align-items:center;gap:10px;min-height:56px;font:560 15px/1.3 var(--font-body);color:var(--text);cursor:pointer;list-style:none}
 .names-panel summary::-webkit-details-marker{display:none}
 .names-panel summary:hover .names-chevron{color:var(--text)}
@@ -697,7 +709,7 @@ body[data-page=tools] .page-intro[data-atmosphere=fallback]::before{background:r
 .names-body>p{max-width:680px;font-size:14px;line-height:1.6;color:var(--text-3)}
 .names-list{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0;padding:0;list-style:none}
 .names-list li{padding:4px 9px;border-radius:8px;background:#ffffff06;box-shadow:inset 0 0 0 1px #ffffff12;font:500 12px/1.4 var(--font-mono);color:var(--text-2)}
-.names-list li.is-weak{background:none;color:var(--text-3)}
+.names-list li.is-weak{background:none;box-shadow:none;outline:1px dashed #ffffff33;outline-offset:-1px;color:var(--text-3)}
 .check-note{margin-top:18px;font-size:13.5px;line-height:1.6;color:var(--text-3)}
 .section-title h2,.projects-end h2{font:420 var(--display-s)/1.06 var(--font-display);letter-spacing:var(--track-display)}
 
@@ -730,7 +742,7 @@ body[data-page=tools] .page-intro[data-atmosphere=fallback]::before{background:r
 .scope-rows dd{margin:0;max-width:640px;font-size:16px;line-height:1.7;color:var(--text-2)}
 .questions{padding-top:56px;border-top:1px solid var(--line)}
 .faq-list{border-top:1px solid var(--line-2)}
-.faq-list details{border-bottom:1px solid var(--line)}
+.faq-list details{position:relative;border-bottom:1px solid var(--line)}
 .faq-list summary{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:22px 4px;list-style:none;font:580 17px/1.4 var(--font-body);letter-spacing:-.015em;cursor:pointer;border-radius:var(--r-sm);transition:color .3s var(--ease-out)}
 .faq-list summary::-webkit-details-marker{display:none}
 .faq-list summary:hover{color:var(--accent-soft)}
@@ -740,7 +752,7 @@ body[data-page=tools] .page-intro[data-atmosphere=fallback]::before{background:r
 .faq-body p{max-width:680px;padding:0 4px 24px;font-size:16px;line-height:1.7;color:var(--text-2)}
 
 /* ───────────────────────── Projects ───────────────────────── */
-.projects-intro{display:flex;justify-content:space-between;gap:32px;padding-top:30px;padding-bottom:40px}
+.projects-intro{display:grid;grid-template-columns:minmax(280px,.8fr) minmax(0,1.2fr);gap:8%;align-items:baseline;padding-top:30px;padding-bottom:40px}
 .projects-intro>p:not(.mini-label){max-width:560px;font-size:16px;line-height:1.65;color:var(--text-2)}
 .projects-list{border-top:1px solid var(--line-2)}
 .project-group{display:grid;grid-template-columns:minmax(280px,.8fr) minmax(0,1.2fr);gap:8%;padding:54px 0 64px;border-bottom:1px solid var(--line-2)}
@@ -776,7 +788,7 @@ body[data-page=tools] .page-intro[data-atmosphere=fallback]::before{background:r
 .tools-alert-mark{flex:none;margin-top:3px;font-size:20px;color:var(--accent);animation:slow-turn 24s linear infinite}
 .tools-alert p{font-size:15px;line-height:1.7;color:var(--text-2)}
 .tools-alert strong{color:var(--text)}
-.tools-alert a .arrow,.tools-source a .arrow,.tool-guide-secondary .arrow{display:inline-grid;vertical-align:-2px;font-size:13px}
+.tools-alert a .arrow,.tools-source a .arrow{display:inline-grid;vertical-align:-2px;font-size:13px}
 .tool-guide{position:relative;isolation:isolate;padding:30px 32px 32px;border-radius:28px;background:var(--glass-card);box-shadow:inset 0 1px 0 #ffffff10,inset 0 0 0 1px #ffffff10;scroll-margin-top:calc(var(--header-h) + 24px)}
 .tool-guide-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:start}
 .tool-guide-heading .mini-label{color:var(--label)}
@@ -791,8 +803,9 @@ body[data-page=tools] .page-intro[data-atmosphere=fallback]::before{background:r
 .tool-guide li::before{content:counter(step);position:absolute;left:0;top:1px;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#ffffff08;box-shadow:inset 0 0 0 1px #ffffff17;font:500 11.5px/1 var(--font-mono);color:var(--accent-soft)}
 .tool-guide-limit{padding:14px 18px;border-radius:var(--r-md);background:linear-gradient(115deg,#c9cacd12,#ffffff03);box-shadow:inset 3px 0 0 var(--accent),inset 0 0 0 1px #d5d6d920;font-size:14.5px;line-height:1.65;color:var(--text-2)}
 .tool-guide-limit strong{color:var(--text)}
-.tool-guide-secondary{margin:14px 0 0;font-size:14px}
-.tools-source{display:flex;align-items:center;flex-wrap:wrap;gap:10px 22px;margin-top:20px;padding-top:24px;border-top:1px solid var(--line)}
+.tool-guide-sources{display:flex;flex-wrap:wrap;justify-content:end;gap:8px}
+.tools-source{display:grid;grid-template-columns:repeat(2,max-content);gap:12px 40px;margin-top:20px;padding-top:24px;border-top:1px solid var(--line)}
+.tools-source .mini-label{grid-column:1/-1;margin-bottom:4px}
 .tools-source a{font:560 14px/1.5 var(--font-body)}
 
 /* ───────────────────────── Legal ───────────────────────── */
@@ -804,7 +817,7 @@ body[data-page=tools] .page-intro[data-atmosphere=fallback]::before{background:r
 .trace-legal-scene>.trace-atmosphere.is-live{opacity:.72}
 .legal-main{max-width:840px}
 .legal-main h1{margin:18px 0 16px;font:420 var(--display-m)/1.04 var(--font-display);letter-spacing:var(--track-display)}
-.legal-date{font:500 12px var(--font-mono);color:var(--text-3)}
+.legal-date{margin-top:4px;font:500 12px/1.6 var(--font-mono);color:var(--text-3)}
 .legal-banner{margin:32px 0 42px;padding:18px 22px;border-radius:var(--r-lg);background:linear-gradient(115deg,#c9cacd14,#ffffff03);box-shadow:inset 3px 0 0 var(--accent),inset 0 0 0 1px #d5d6d926;font-size:15px;line-height:1.7;color:var(--text-2)}
 .legal-main article{font-size:16px;line-height:1.8}
 .legal-main article h2{margin:40px 0 12px;font:600 20px/1.35 var(--font-ui);letter-spacing:-.015em}
@@ -881,8 +894,9 @@ body::after{content:'';position:fixed;inset:0;z-index:80;pointer-events:none;opa
 ::view-transition-old(root){animation:vt-out .2s var(--ease-in) both}
 ::view-transition-new(root){animation:vt-in .5s var(--ease-out) both}
 ::view-transition-group(site-header){animation:none}
-::view-transition-old(site-header){display:none}
-::view-transition-new(site-header){animation:none}
+/* The header crossfades (the browser's own plus-lighter pair), so the logo and the scrolled background of the old page
+   fade instead of popping; it does not move. */
+::view-transition-old(site-header),::view-transition-new(site-header){animation-duration:.28s;animation-timing-function:var(--ease-out)}
 ::view-transition-group(nav-current){animation-duration:var(--dur-snappy);animation-timing-function:var(--spring-snappy)}
 ::view-transition-old(nav-current),::view-transition-new(nav-current){height:100%;animation-duration:.3s}
 /* The page title moves between pages as one element. */
@@ -890,6 +904,8 @@ body::after{content:'';position:fixed;inset:0;z-index:80;pointer-events:none;opa
 ::view-transition-group(page-title){animation-duration:var(--dur-smooth);animation-timing-function:var(--spring-smooth)}
 ::view-transition-old(page-title){animation:vt-title-out .24s var(--ease-in) both}
 ::view-transition-new(page-title){animation:vt-title-in .5s var(--ease-out) .06s both}
+/* A page that arrives through a view transition does not play its own entrance on top of it (site.mjs, pagereveal). */
+.vt-arrival :is(.page-intro .eyebrow,.intro-row h1,.intro-row>p,.legal-main>*){animation:none!important}
 @keyframes vt-title-out{to{opacity:0;filter:blur(6px)}}
 @keyframes vt-title-in{from{opacity:0;filter:blur(6px)}}
 @keyframes vt-out{to{opacity:0;transform:scale(.992)}}
@@ -903,7 +919,8 @@ body::after{content:'';position:fixed;inset:0;z-index:80;pointer-events:none;opa
 }
 @media(max-width:980px){
   .desktop-nav{display:none}
-  .header-actions{margin-left:auto}
+  .header-inner{grid-template-columns:1fr auto}
+  .header-actions{grid-column:2}
   .methods-head,.section-title,.check-rail{position:static}
   .ecosystem{grid-template-columns:1fr}
   .ecosystem-heading{position:static;margin-bottom:40px}
@@ -972,7 +989,8 @@ body::after{content:'';position:fixed;inset:0;z-index:80;pointer-events:none;opa
   .tools-rail nav a{flex:none}
   .tool-guide{padding:24px 20px}
   .tool-guide-heading{grid-template-columns:minmax(0,1fr)}
-  .tool-guide-source{justify-self:start}
+  .tool-guide-source,.tool-guide-sources{justify-self:start;justify-content:start}
+  .tools-source{grid-template-columns:minmax(0,1fr)}
   .footer-bottom{display:block}
   .footer-bottom>div{margin-top:14px}
   .site-menu{right:8px}
@@ -1008,7 +1026,7 @@ body::after{content:'';position:fixed;inset:0;z-index:80;pointer-events:none;opa
   :is([data-reveal],.title-line,.cinema-kicker,.cinema-lead,.cinema-actions,.hero-floor,.page-intro .eyebrow,.intro-row h1,.intro-row>p,.legal-main>*){animation-duration:.4s!important;animation-timing-function:var(--ease-out)!important}
   *:not(:is([data-reveal],.title-line,.cinema-kicker,.cinema-lead,.cinema-actions,.hero-floor,.page-intro .eyebrow,.intro-row h1,.intro-row>p,.legal-main>*)),*::before,*::after{animation:none!important}
   *,*::before,*::after{transition-property:opacity,color,background-color,border-color,text-decoration-color!important;transition-duration:.2s!important}
-  ::view-transition-group(*){animation-duration:.25s!important}
+  ::view-transition-group(*){animation:none!important}
   .brand-ray{stroke-dashoffset:0}
   .cinema-copy,.cinema-word{transform:none;opacity:1;animation:none!important}
   .site-header .brand-lockup,.bl,.brand-period{opacity:1!important;transform:none!important;filter:none!important}
@@ -1028,6 +1046,9 @@ body::after{content:'';position:fixed;inset:0;z-index:80;pointer-events:none;opa
   .menu-trigger,.motion-toggle,.icon-button,.task-chip{border:1px solid ButtonText}
   .task-dot{forced-color-adjust:none;background:Canvas;border:1px solid ButtonText}
   .task-chip:has(input:checked) .task-dot{background:Highlight}
+  /* Glass surfaces without a border would melt into the page; the smoke canvas would force backplates under text. */
+  .island-glass,.menu-body,.game-glass,.trace-panel{border:1px solid CanvasText}
+  .trace-atmosphere{display:none}
   .check-box{border:1.5px solid ButtonText}
   input:checked+.check-box{forced-color-adjust:none;background:Highlight;color:HighlightText}
 }

@@ -69,7 +69,7 @@
   /* ───── Dialogs zoom out of the control that opened them ───── */
   const menuTrigger = document.getElementById('menu-trigger');
   const menu = document.getElementById('site-menu');
-  const triggers = new WeakMap(), closeTimers = new WeakMap(), settleTimers = new WeakMap();
+  const triggers = new WeakMap(), closeTimers = new WeakMap(), settleTimers = new WeakMap(), closeListeners = new WeakMap();
   function placeOrigin(dialog, trigger) {
     const box = {x: dialog.offsetLeft, y: dialog.offsetTop, w: dialog.offsetWidth, h: dialog.offsetHeight};
     const source = trigger?.getBoundingClientRect();
@@ -113,10 +113,15 @@
       });
       // One blur on the whole content pulls focus instead of a filter surface per row.
       menuContent.style.filter = c < .98 ? `blur(${((1 - c) * 2.6).toFixed(2)}px)` : '';
-      // The panel gains its backdrop blur once it has nearly finished opening, and loses it as soon as it starts closing.
-      if (menuMorph.open) { if (p > .97) menu.classList.add('is-settled'); } else menu.classList.remove('is-settled');
+      // The panel loses its rim and backdrop blur as soon as it starts closing; it gains them only at rest (onRest), so
+      // the rim never shows inside glass that is still overshooting.
+      if (!menuMorph.open) {
+        menu.classList.remove('is-settled');
+        // Back at the size of the trigger the page is given back at once; the last pixels of the spring are not waited for.
+        if (menu.dataset.closing && p < .04) finishClose(menu);
+      }
     },
-    onRest: open => { if (!open && menu.dataset.closing) finishClose(menu); }
+    onRest: open => { if (open) menu.classList.add('is-settled'); else if (menu.dataset.closing) finishClose(menu); }
   });
   function layoutMenu() {
     const width = Math.min(380, innerWidth - 24);
@@ -147,14 +152,22 @@
     if (dialog.open) {
       if (!dialog.dataset.closing) return;
       clearTimeout(closeTimers.get(dialog)); delete dialog.dataset.closing;
+      const onEnd = closeListeners.get(dialog);
+      if (onEnd) { dialog.removeEventListener('transitionend', onEnd); closeListeners.delete(dialog); }
     } else {
       triggers.set(dialog, trigger);
       dialog.showModal();
       if (dialog === menu && menuMorph) { layoutMenu(); menuMorph.snap(false); }
-      else placeOrigin(dialog, trigger);
+      else {
+        placeOrigin(dialog, trigger);
+        // showModal has already started a transition from the default scale; dropping it lets the panel open from the
+        // button that opened it, the same place it closes back into.
+        dialog.getAnimations().forEach(animation => animation.cancel());
+      }
       dialog.getBoundingClientRect();
     }
     if (dialog === menu && menuMorph) menuMorph.set(true);
+    island?.hide();
     requestAnimationFrame(() => dialog.classList.add('is-open'));
     if (dialog !== menu) settleTimers.set(dialog, setTimeout(() => dialog.classList.add('is-settled'), 520));
     if (dialog === menu) menuTrigger?.setAttribute('aria-expanded', 'true');
@@ -176,17 +189,30 @@
     const finish = () => {
       if (!dialog.dataset.closing) return;
       clearTimeout(closeTimers.get(dialog));
-      dialog.removeEventListener('transitionend', onEnd);
+      dialog.removeEventListener('transitionend', onEnd); closeListeners.delete(dialog);
       delete dialog.dataset.closing;
       dialog.close();
       triggers.get(dialog)?.focus({preventScroll: true});
     };
     const onEnd = event => { if (event.target === dialog && event.propertyName === 'transform') finish(); };
     if (reduced()) { finish(); return; }
-    dialog.addEventListener('transitionend', onEnd);
+    dialog.addEventListener('transitionend', onEnd); closeListeners.set(dialog, onEnd);
     closeTimers.set(dialog, setTimeout(finish, 420));
   }
   menuTrigger?.addEventListener('click', () => menu.open && !menu.dataset.closing ? closeDialog(menu) : openDialog(menu, menuTrigger));
+  addEventListener('resize', () => { if (menu?.open && !menu.dataset.closing && menuMorph) { layoutMenu(); menuMorph.snap(true); } }, {passive: true});
+  // Back to a page kept in the browser's page cache: dialogs left open by the click that navigated away are closed,
+  // and the title that sat out the transition takes part in the next one.
+  addEventListener('pageshow', event => {
+    if (!event.persisted) return;
+    document.querySelectorAll('dialog[open]').forEach(dialog => {
+      clearTimeout(closeTimers.get(dialog)); delete dialog.dataset.closing;
+      dialog.classList.remove('is-open', 'is-settled'); dialog.close();
+    });
+    menuTrigger?.setAttribute('aria-expanded', 'false');
+    if (menuMorph) menuMorph.snap(false);
+    document.querySelector('.intro-row h1, .legal-main h1')?.style.removeProperty('view-transition-name');
+  });
   document.querySelectorAll('dialog').forEach(dialog => {
     dialog.addEventListener('cancel', event => { event.preventDefault(); closeDialog(dialog); });
     dialog.addEventListener('click', event => {
@@ -194,7 +220,11 @@
       const outside = event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom;
       if (event.target === dialog && outside) closeDialog(dialog);
     });
-    dialog.querySelectorAll('[data-close-dialog]').forEach(button => button.addEventListener('click', () => closeDialog(dialog)));
+    dialog.querySelectorAll('[data-close-dialog]').forEach(button => button.addEventListener('click', () => {
+      // The menu's close button stands where the trigger is: pressed while the menu is closing, it opens it again.
+      if (dialog === menu && dialog.dataset.closing) openDialog(dialog, triggers.get(dialog));
+      else closeDialog(dialog);
+    }));
   });
 
   /* ───── Notification island: fixed to the window, never to the page ───── */
@@ -234,12 +264,14 @@
     return {
       show(heading, note) {
         timers.splice(0).forEach(clearTimeout);
-        const wasHidden = host.hidden || motion.springs.presence.target === 0;
+        const wasHidden = host.hidden || motion.springs.presence.x < .05;
         host.hidden = false;
         title.textContent = heading; detail.textContent = note; detail.hidden = !note;
         const target = Math.ceil(content.scrollWidth);
-        fullWidth = Math.max(base, target, fullWidth);
+        fullWidth = wasHidden ? Math.max(base, target) : Math.max(base, target, fullWidth);
         glass.style.width = `${fullWidth}px`;
+        // The wider layout and its clip land in the same frame, so the pill never flashes at its new width.
+        motion.render(motion.values, motion);
         if (reduced()) {
           motion.to({presence: 1, width: target, reveal: 1}, {immediate: true});
         } else if (wasHidden) {
@@ -251,7 +283,7 @@
           later(() => motion.to({reveal: 1}, {config: {reveal: [.5, 0]}}), 170);
         } else {
           motion.springs.reveal.x = Math.min(motion.springs.reveal.x, .35);
-          motion.to({width: target, reveal: 1});
+          motion.to({presence: 1, width: target, reveal: 1}, {config: {presence: [.52, .3]}});
         }
         later(() => this.hide(), 2800);
       },
@@ -308,6 +340,7 @@
     revealNodes.forEach(node => revealObserver.observe(node));
   }
   addEventListener('pageshow', event => { if (event.persisted) revealAll(); });
+  document.addEventListener('focusin', event => { event.target.closest?.('[data-reveal]:not(.is-in)')?.classList.add('is-in'); });
 
   // Section headings resolve line by line; lines keep native kerning.
   const headings = [...document.querySelectorAll('.methods-head h2, .ecosystem-heading h2, .section-title h2, .final-cta h2, .statement-title, .projects-end h2')]
@@ -352,30 +385,32 @@
     }, {passive: true});
   });
 
-  /* ───── FAQ: disclosure height follows a spring, content focuses in ───── */
-  document.querySelectorAll('.faq-list details').forEach(details => {
-    const summary = details.querySelector('summary'), body = details.querySelector('.faq-body');
+  /* ───── Disclosures (FAQ, the names list on the check page): the same FLIP as the check panel ─────
+     Opening: the answer focuses in while everything below slides down from where it was. Closing: the layout closes at
+     once and a copy of the answer folds up in its place while everything below slides up over it. A click during
+     either reverses it from where things are on screen, and the page never jumps (morphHeight in spring.js). */
+  document.querySelectorAll('.faq-list details, .names-panel').forEach(details => {
+    const summary = details.querySelector('summary'), body = details.querySelector('.faq-body, .names-body');
     if (!summary || !body) return;
-    let running = [];
-    const stop = () => { running.forEach(a => a.cancel()); running = []; };
+    let ghost = null;
+    const dropGhost = () => { ghost?.remove(); ghost = null; };
     summary.addEventListener('click', event => {
       if (reduced()) return;
       event.preventDefault();
-      if (details.open && !details.dataset.closing) {
-        // Close: the answer folds up and everything after it slides up by its height; then the layout collapses
-        // in the same frame the slide ends, so nothing jumps.
-        stop();
-        details.dataset.closing = 'true';
-        const h = body.getBoundingClientRect().height, options = {duration: 380, easing: curves.inout};
-        const after = followers(details).filter(node => node.getBoundingClientRect().top < innerHeight * 1.5);
-        running = [body.animate([{clipPath: 'inset(0 0 0 0)', opacity: 1}, {clipPath: `inset(0 0 ${h.toFixed(1)}px 0)`, opacity: 0}], {...options, fill: 'forwards'}),
-          ...after.map(node => node.animate([{transform: 'none'}, {transform: `translateY(${(-h).toFixed(1)}px)`}], {...options, fill: 'forwards'}))];
-        running[0].onfinish = () => { details.open = false; delete details.dataset.closing; stop(); };
+      dropGhost();
+      if (details.open) {
+        const box = body.getBoundingClientRect(), frame = details.getBoundingClientRect();
+        ghost = body.cloneNode(true);
+        ghost.setAttribute('aria-hidden', 'true'); ghost.inert = true;
+        ghost.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'));
+        Object.assign(ghost.style, {position: 'absolute', left: `${box.left - frame.left}px`, top: `${box.top - frame.top}px`, width: `${box.width}px`, margin: '0', pointerEvents: 'none'});
+        morphHeight(details, () => { details.open = false; details.append(ghost); });
+        const leaving = ghost;
+        leaving.animate([{clipPath: 'inset(0 0 0 0)', opacity: 1, filter: 'blur(0)'}, {clipPath: `inset(0 0 ${box.height.toFixed(1)}px 0)`, opacity: 0, filter: 'blur(4px)'}], {duration: 420, easing: curves.inout, fill: 'forwards'})
+          .finished.then(() => { if (ghost === leaving) dropGhost(); }, () => {});
       } else {
-        stop();
-        delete details.dataset.closing;
         morphHeight(details, () => { details.open = true; });
-        running = [body.animate([{opacity: 0, filter: 'blur(6px)'}, {opacity: 1, filter: 'blur(0)'}], {duration: duration('snappy'), easing: easing('snappy')})];
+        body.animate([{opacity: 0, filter: 'blur(6px)', transform: 'translateY(-6px)'}, {opacity: 1, filter: 'blur(0)', transform: 'none'}], {duration: duration('snappy'), easing: easing('snappy'), fill: 'backwards'});
       }
     });
   });
@@ -504,7 +539,7 @@
       tag.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${lean.toFixed(2)}deg) scale(${(.4 + .6 * Math.max(0, p)).toFixed(3)})`;
       tag.style.opacity = clamp(p * 1.6).toFixed(3);
     });
-    const targets = [['.game-row', 'Открыть проверку'], ['.project-destinations > a:not(.project-check)', 'Официальный сайт'], ['.signal-name', 'Скопировать имя'], ['.method-row', 'Открыть этот способ']];
+    const targets = [['.game-row', 'Открыть проверку'], ['.project-destinations > a:not(.project-check)', 'Официальный сайт'], ['.method-row', 'Открыть этот способ']];
     let current = null;
     document.addEventListener('pointermove', event => {
       if (event.pointerType !== 'mouse') return;
@@ -621,6 +656,12 @@
     return holder;
   });
   warm(() => ghost('island', '<div class="island-glass" style="filter:blur(1px);transform:scale(.9)"><div class="island-content"><span class="island-icon"></span><span class="island-text"><strong>TRACE</strong><small>TRACE</small></span></div></div>', 'left:auto;right:24px;translate:none'));
+
+  addEventListener('pageswap', event => {
+    if (!event.viewTransition) return;
+    const title = document.querySelector('.intro-row h1, .legal-main h1'), box = title?.getBoundingClientRect();
+    if (box && (box.bottom < header.offsetHeight || box.top > innerHeight)) title.style.viewTransitionName = 'none';
+  });
 
   window.TraceUI = {openDialog, closeDialog, notify, warm, reducedMotion: reduceQuery, motionStopped, onMotion: listener => motionListeners.add(listener), onScroll: onScrollFrame, finePointer};
   window.TraceToast = message => notify({title: message});

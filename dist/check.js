@@ -1,26 +1,33 @@
 'use strict';
 
 // Commands come from commands.js; this file is the page around them: game, method, task, copy.
-const {games, tasks, about, command, fileFor} = window.TraceCommands;
+const {games, tasks, about, commandPieces, fileFor} = window.TraceCommands;
 
 const consent = 'Запускайте только на своём ПК или с ясного согласия владельца. При удалённой проверке действуют правила сервера: ReallyWorld, например, запрещает проверяющему самому открывать CMD или PowerShell через AnyDesk.';
 const artNote = 'Первое копирование даёт команду с заставкой TRACE. Следующие копирования той же команды идут без заставки, так повторный запуск короче.';
-const verdict = 'Совпадение названия — повод разобраться, а не доказательство. Пустой результат не доказывает, что ПК чист.';
+// Numbered are only the steps a person takes in order; the rest are notes around them.
 const methods = {
   powershell: {
     terminal: 'Windows PowerShell', prompt: 'PS >', guideTitle: 'Как запустить проверку в PowerShell',
-    guide: [consent,
-      'Откройте Windows PowerShell от имени администратора: Win+X, затем «Терминал (администратор)» или «Windows PowerShell (администратор)». Без этих прав команда тоже работает, но часть источников пропустит и перечислит их в конце.',
-      'Выберите задачу, прочитайте команду, скопируйте её, вставьте в окно и нажмите Enter.',
-      artNote, verdict]
+    steps: [
+      'Откройте Windows PowerShell от имени администратора: Win+X, затем «Терминал (администратор)» или «Windows PowerShell (администратор)».',
+      'Выберите задачу и прочитайте команду.',
+      'Скопируйте её, вставьте в окно PowerShell и нажмите Enter.'
+    ],
+    notes: ['Без прав администратора команда тоже работает, но часть источников пропустит и перечислит их в конце.', artNote]
   },
   cmd: {
     terminal: 'Командная строка Windows', prompt: 'C:\\>', guideTitle: 'Как запустить проверку в CMD',
-    guide: [consent,
+    steps: [
       'Откройте командную строку от имени администратора: Пуск, введите cmd, затем «Запуск от имени администратора».',
-      'Команда запускает Windows PowerShell (powershell -NoProfile -Command) и делает то же, что команда на вкладке PowerShell. Это одна строка: вставьте её целиком и нажмите Enter.',
+      'Выберите задачу и прочитайте команду.',
+      'Скопируйте её, вставьте в окно целиком (это одна строка) и нажмите Enter.'
+    ],
+    notes: [
+      'Команда запускает Windows PowerShell (powershell -NoProfile -Command) и делает то же, что команда на вкладке PowerShell.',
       '«Всё сразу» не помещается в одну строку CMD (предел 8191 символ), поэтому эта задача запускает скачанный файл полной проверки из папки «Загрузки». Ключ -ExecutionPolicy Bypass действует только на этот запуск и не меняет настройки Windows.',
-      artNote, verdict]
+      artNote
+    ]
   },
   manual: {}
 };
@@ -31,7 +38,7 @@ const manualGuide = {
   cs2: 'В Steam откройте свойства CS2 → Установленные файлы → Проверить целостность. Потом посмотрите процессы и папку %APPDATA%\\OsirisCS2\\configs. Проверка в Steam память игры не анализирует.'
 };
 const aboutTask = (gameKey, taskKey) => gameKey === 'minecraft' && taskKey === 'all'
-  ? 'Сценарий TRACE-PRO: процессы Java, системные следы Windows, папки лаунчеров и классы внутри JAR. После проверки откроется меню, где пункт 5 сохраняет отчёт.'
+  ? 'Сценарий TRACE-PRO: все задачи из списка, кроме «Все диски», с оценкой каждой находки. После проверки откроется меню, где пункт 5 сохраняет отчёт.'
   : about[taskKey];
 
 const el = id => document.getElementById(id);
@@ -41,7 +48,8 @@ let activeMethod = 'powershell';
 let activeGame = null;
 let activeTask = 'all';
 
-// Short labels swap like a split-flap: the old line leaves, the new one lands.
+// Short labels swap like a split-flap: the old line leaves, the new one lands. Each travels its whole height, so the
+// two never sit on top of each other halfway.
 function swapText(frame, span, text, direction = 1) {
   if (span.textContent === text) return;
   if (reduced()) { span.textContent = text; return; }
@@ -50,24 +58,31 @@ function swapText(frame, span, text, direction = 1) {
   ghost.style.cssText = 'position:absolute;left:0;top:0;right:0;pointer-events:none';
   frame.append(ghost);
   span.textContent = text;
-  animate(ghost, [{transform: 'none', opacity: 1, filter: 'blur(0)'}, {transform: `translateY(${-75 * direction}%)`, opacity: 0, filter: 'blur(3px)'}], {duration: 300, easing: TraceMotion.curves.inout}).then(() => ghost.remove());
-  animate(span, [{transform: `translateY(${75 * direction}%)`, opacity: 0, filter: 'blur(3px)'}, {transform: 'none', opacity: 1, filter: 'blur(0)'}], {spring: 'snappy', fill: 'none'});
+  animate(ghost, [{transform: 'none', opacity: 1, filter: 'blur(0)'}, {transform: `translateY(${-110 * direction}%)`, opacity: 0, filter: 'blur(3px)'}], {duration: 300, easing: TraceMotion.curves.inout}).then(() => ghost.remove());
+  animate(span, [{transform: `translateY(${110 * direction}%)`, opacity: 0, filter: 'blur(3px)'}, {transform: 'none', opacity: 1, filter: 'blur(0)'}], {spring: 'snappy', fill: 'backwards'});
 }
+// Sets a text and says whether it changed: only what changed is animated.
+const setText = (node, text) => { if (node.textContent === text) return false; node.textContent = text; return true; };
 
 /* ───── Names: the list the selected game's commands search, straight from commands.js ───── */
 function renderNames(gameKey) {
   const game = games[gameKey], names = game.terms(), weak = new Set(game.weak());
   el('names-count').textContent = String(names.length);
-  el('names-source').textContent = `${game.source}${weak.size ? ' Серым отмечены общие слова: совпадение с ними часто ложное.' : ''}`;
+  el('names-source').textContent = `${game.source}${weak.size ? ' Пунктиром отмечены общие слова, имена и обычные программы: совпадение с ними часто ложное, поэтому они ищутся только отдельным словом.' : ''}`;
   el('names-list').replaceChildren(...names.map(name => {
     const item = document.createElement('li');
     item.textContent = name;
-    if (weak.has(name)) item.className = 'is-weak';
+    if (weak.has(name)) {
+      item.className = 'is-weak';
+      const note = document.createElement('span');
+      note.className = 'visually-hidden'; note.textContent = ' (возможно ложное совпадение)';
+      item.append(note);
+    }
     return item;
   }));
   const jar = game.jar?.();
   el('names-jar').hidden = !jar;
-  if (jar) el('names-jar').textContent = `Внутри JAR ищутся пакеты: ${jar.join(', ')}.`;
+  if (jar) el('names-jar').textContent = `Внутри JAR ищутся пакеты (папки в архиве): ${jar.join(', ')}.`;
 }
 
 const terminalBody = document.querySelector('.terminal-body');
@@ -78,24 +93,40 @@ terminalBody.addEventListener('scroll', syncTerminalEdge, {passive: true});
 // The TRACE art comes with the first copy of each command (method, game and task); later copies come without it.
 const copiedOnce = new Set();
 const commandKey = () => `${activeMethod}:${el('game').value}:${activeTask}`;
-const currentCommand = () => command(el('game').value, activeMethod, activeTask, !copiedOnce.has(commandKey()));
+const currentPieces = () => commandPieces(el('game').value, activeMethod, activeTask, !copiedOnce.has(commandKey()));
+const currentCommand = () => currentPieces().join('');
+const artGlyphs = /[█╗╔╝╚═║]/;
 let shownCommand = '';
+// Each piece is a span: the text of all of them together is exactly the copied command (generated line breaks of a
+// one-line CMD command are CSS ::after content, which is neither text nor selected).
 function showCommand({flash = false} = {}) {
-  shownCommand = currentCommand();
-  el('command').textContent = shownCommand;
+  const pieces = currentPieces(), next = pieces.join('');
+  if (next === shownCommand) return false;
+  shownCommand = next;
+  const code = el('command');
+  code.classList.toggle('is-oneline', !/[\r\n]/.test(next));
+  code.replaceChildren(...pieces.map(piece => {
+    const span = document.createElement('span');
+    span.className = artGlyphs.test(piece) ? 'cmd-line cmd-art' : 'cmd-line';
+    span.textContent = piece;
+    return span;
+  }));
   terminalBody.scrollTop = 0;
   syncTerminalEdge();
-  if (flash && !reduced()) animate(el('command'), [{opacity: 0, filter: 'blur(4px)', transform: 'translateY(6px)'}, {opacity: 1, filter: 'blur(0)', transform: 'none'}], {spring: 'snappy', fill: 'none'});
+  if (!flash && typeof resetCopied === 'function') resetCopied();
+  if (flash && !reduced()) animate(el('command'), [{opacity: 0, filter: 'blur(4px)', transform: 'translateY(6px)'}, {opacity: 1, filter: 'blur(0)', transform: 'none'}], {spring: 'snappy', fill: 'backwards'});
+  return true;
 }
 
 /* ───── Tasks: one radio per source; the list depends on the game (JAR classes are Minecraft only) ───── */
 const taskGrid = el('task-grid');
+// Returns whether the chips were rebuilt (GTA V RP and CS2 share one set, so switching between them rebuilds nothing).
 function renderTasks(gameKey) {
   const keys = games[gameKey].tasks;
   if (!keys.includes(activeTask)) activeTask = 'all';
   if (taskGrid.dataset.keys === keys.join()) {
     taskGrid.querySelectorAll('input').forEach(input => { input.checked = input.value === activeTask; });
-    return;
+    return false;
   }
   taskGrid.dataset.keys = keys.join();
   taskGrid.replaceChildren(...keys.map(key => {
@@ -108,47 +139,63 @@ function renderTasks(gameKey) {
     label.querySelector('small').textContent = tasks[key].note;
     return label;
   }));
+  return true;
 }
+// Brings the right column up to date and returns what visibly changed.
 function syncTask() {
   const gameKey = el('game').value, task = tasks[activeTask], cmdFile = activeMethod === 'cmd' && activeTask === 'all';
-  el('task-about').textContent = aboutTask(gameKey, activeTask);
-  el('command-scope').textContent = task.admin ? 'Лучше запускать от имени администратора' : 'Права администратора не нужны';
-  el('task-hint').hidden = !cmdFile;
-  if (cmdFile) el('task-hint').textContent = `Команда запускает файл ${fileFor(gameKey)} из папки «Загрузки»: сначала скачайте его кнопкой ниже.`;
+  const changed = [];
+  if (setText(el('task-about'), aboutTask(gameKey, activeTask))) changed.push(el('task-about'));
+  setText(el('command-scope'), task.admin ? 'Лучше запускать от имени администратора' : 'Работает без прав администратора');
+  const hint = el('task-hint'), wasHidden = hint.hidden;
+  hint.hidden = !cmdFile;
+  if (cmdFile && (setText(hint, `Команда запускает самый новый файл ${fileFor(gameKey).replace('.ps1', '*.ps1')} из папки «Загрузки»: сначала скачайте его кнопкой ниже.`) || wasHidden)) changed.push(hint);
   el('download').href = `scripts/${fileFor(gameKey)}`;
   el('download').download = fileFor(gameKey);
-  showCommand();
+  if (showCommand()) changed.push(terminalBody);
+  return changed;
 }
+// Everything in the right column that can move when its height changes; morphHeight slides each from where it was.
+const panelParts = () => [...el('command-content').children, ...el('manual-content').children, document.querySelector('.check-note')];
 taskGrid.addEventListener('change', event => {
   const input = event.target.closest('input[name=task]');
   if (!input) return;
   activeTask = input.value;
-  morphHeight(el('tool-panel'), syncTask);
+  let changed = [];
+  morphHeight(el('tool-panel'), () => { changed = syncTask(); }, {inside: panelParts()});
   if (!reduced()) animate(input.closest('.task-chip'), [{transform: 'scale(.95)', filter: 'brightness(1.8)'}, {transform: 'none', filter: 'brightness(1)'}], {spring: 'bouncy', fill: 'none'});
-  materialize([el('task-about'), terminalBody], {stagger: 40});
+  materialize(changed, {stagger: 40});
 });
 
 function renderSelection({animated = true} = {}) {
   const method = methods[activeMethod], manual = activeMethod === 'manual';
-  const gameKey = el('game').value, gameChanged = activeGame !== gameKey;
+  const gameKey = el('game').value, gameChanged = activeGame !== gameKey, wasManual = el('command-content').hidden;
   activeGame = gameKey;
+  let changed = [];
   const apply = () => {
     document.body.dataset.game = gameKey;
     el('command-content').hidden = manual;
     el('manual-content').hidden = !manual;
-    el('manual-guide').textContent = manualGuide[gameKey];
+    // The note speaks about command results; the checklist has its own words.
+    document.querySelector('.check-note').hidden = manual;
+    const guideChanged = setText(el('manual-guide'), manualGuide[gameKey]);
     if (gameChanged) renderNames(gameKey);
-    renderTasks(gameKey);
-    if (!manual) {
-      el('terminal-title').textContent = method.terminal;
-      el('prompt').textContent = method.prompt;
-      syncTask();
+    const gridChanged = renderTasks(gameKey);
+    if (manual) {
+      if (!wasManual) changed.push(el('manual-content'));
+      else if (guideChanged) changed.push(el('manual-guide'));
+      return;
     }
+    if (wasManual) changed.push(el('command-content'));
+    if (gridChanged) changed.push(taskGrid);
+    const titleChanged = setText(el('terminal-title'), method.terminal);
+    el('prompt').textContent = method.prompt;
+    const synced = syncTask();
+    if (!wasManual) changed.push(...(titleChanged ? [el('terminal-title')] : []), ...synced);
   };
   if (!animated) { apply(); return; }
-  morphHeight(el('tool-panel'), apply);
-  const content = manual ? [el('manual-content')] : [el('task-about'), el('terminal-title'), terminalBody, gameChanged ? taskGrid : null];
-  materialize(content, {stagger: 38});
+  morphHeight(el('tool-panel'), apply, {inside: panelParts()});
+  materialize(changed, {stagger: 38});
 }
 
 /* ───── Game list: the trigger's capsule itself opens into the list ─────
@@ -207,7 +254,7 @@ const gameMorph=new Morph({body:gameGlass,content:gameList,
     const target=gameMorph.target;
     // How far the glass has opened past the header row, measured from the trigger.
     const reach=gameDir>0?b-target.y:target.y+target.h-t;
-    gameDivider.style.opacity=(smooth(4,20,reach-gameTrigger.offsetHeight)*c).toFixed(3);
+    gameDivider.style.opacity=(smooth(4,20,reach-gameRowHeight)*c).toFixed(3);
     gameRows.forEach((row,index)=>{
       const option=gameOptionNodes[index];
       const near=gameDir>0?row.top:target.h-row.bottom;
@@ -223,8 +270,10 @@ const gameMorph=new Morph({body:gameGlass,content:gameList,
   onRest:open=>{if(!open){gameList.hidden=true;gameSurface.classList.remove('is-open','is-up');}}
 });
 
+let gameRowHeight=50;
 function layoutGame(){
   const W=gameTrigger.offsetWidth,H=gameTrigger.offsetHeight,pad=6;
+  gameRowHeight=H;
   const hidden=gameList.hidden;gameList.hidden=false;
   gameList.style.width=`${W+pad*2}px`;
   gameList.style.paddingTop=gameList.style.paddingBottom='';
@@ -238,7 +287,7 @@ function layoutGame(){
   gameList.hidden=hidden;
   gameMorph.layout({x:0,y:0,w:W,h:H,r:17},gameDir>0?{x:-pad,y:-pad,w:W+pad*2,h:total,r:22}:{x:-pad,y:H+pad-total,w:W+pad*2,h:total,r:22});
 }
-new ResizeObserver(()=>{if(!gameOpen){layoutGame();gameMorph.snap(false);}}).observe(gameTrigger);
+new ResizeObserver(()=>{layoutGame();gameMorph.snap(gameOpen);}).observe(gameTrigger);
 
 function openGameOptions(move=0){
   if(!gameOpen){
@@ -290,12 +339,6 @@ const gamePress=new Motion({p:new Spring({duration:.3,bounce:.45,precision:.002}
 });
 gameTrigger.addEventListener('pointerdown',event=>{if(event.button===0&&!gameOpen)gamePress.to({p:1},{config:{p:[.2]}});});
 for(const type of ['pointerup','pointerleave','pointercancel'])gameTrigger.addEventListener(type,()=>gamePress.to({p:0},{config:{p:[.42,.5]}}));
-gameSelect.addEventListener('pointermove',event=>{
-  if(event.pointerType!=='mouse')return;
-  const box=gameGlass.getBoundingClientRect();
-  gameSurface.style.setProperty('--glass-x',`${(event.clientX-box.left).toFixed(1)}px`);
-  gameSurface.style.setProperty('--glass-y',`${(event.clientY-box.top).toFixed(1)}px`);
-},{passive:true});
 function chooseGame(index){
   const option=gameOptionNodes[index];
   if(option.dataset.value!==nativeGame.value){
@@ -308,6 +351,14 @@ function chooseGame(index){
 }
 gameTrigger.addEventListener('click',()=>gameOpen?closeGameOptions():openGameOptions());
 gameTrigger.addEventListener('keydown',event=>{
+  if(gameOpen&&((event.key==='ArrowUp'&&event.altKey)||event.key==='Tab')){
+    if(event.key!=='Tab')event.preventDefault();
+    chooseGame(activeGameOption);return;
+  }
+  if(event.key==='PageUp'||event.key==='PageDown'){
+    event.preventDefault();if(!gameOpen)openGameOptions();
+    setActiveGameOption(event.key==='PageUp'?0:gameOptionNodes.length-1);return;
+  }
   if(event.key==='ArrowDown'||event.key==='ArrowUp'){
     event.preventDefault();
     const step=event.key==='ArrowDown'?1:-1;
@@ -325,18 +376,26 @@ gameTrigger.addEventListener('keydown',event=>{
     return;
   }
   if(event.key==='Escape'&&gameOpen){event.preventDefault();event.stopPropagation();closeGameOptions(true);return;}
-  if(event.key==='Tab'&&gameOpen)closeGameOptions();
   if(event.key.length===1&&!event.ctrlKey&&!event.metaKey&&!event.altKey){
-    typeahead+=event.key.toLocaleLowerCase();clearTimeout(typeaheadTimer);
+    const key=event.key.toLocaleLowerCase();
+    // The same letter again moves to the next option that starts with it.
+    typeahead=typeahead===key?key:typeahead+key;clearTimeout(typeaheadTimer);
     typeaheadTimer=setTimeout(()=>{typeahead='';},700);
-    const index=gameOptionNodes.findIndex(option=>option.querySelector('.game-option-label').textContent.toLocaleLowerCase().startsWith(typeahead));
-    if(index>=0){if(!gameOpen)openGameOptions();setActiveGameOption(index);}
+    const labels=gameOptionNodes.map(option=>option.querySelector('.game-option-label').textContent.toLocaleLowerCase());
+    const start=typeahead.length===1&&gameOpen?activeGameOption+1:0;
+    const order=[...labels.keys()].map(i=>(start+i)%labels.length);
+    const index=order.find(i=>labels[i].startsWith(typeahead));
+    if(index!==undefined){if(!gameOpen)openGameOptions();setActiveGameOption(index);}
   }
 });
 document.addEventListener('pointerdown',event=>{if(gameOpen&&!gameSelect.contains(event.target))closeGameOptions();});
 gamePicker.addEventListener('focusout',()=>requestAnimationFrame(()=>{if(!gamePicker.contains(document.activeElement))closeGameOptions();}));
 el('game-label').addEventListener('click',()=>{gameTrigger.focus();openGameOptions();});
-nativeGame.addEventListener('change',()=>{syncGameChoice();renderSelection();});
+nativeGame.addEventListener('change',()=>{
+  syncGameChoice();
+  document.querySelectorAll('.manual-list input').forEach(input=>{input.checked=false;});
+  renderSelection();
+});
 gameList.addEventListener('pointerleave',()=>{if(gameOpen)setActiveGameOption(nativeGame.selectedIndex);});
 
 /* ───── Method tabs: one glass lens glides between them ───── */
@@ -371,10 +430,12 @@ tabs.forEach((tab,index)=>{
 const copyButton=el('copy');
 const copyLabel=copyButton.querySelector('.copy-label');
 let copyTimer;
-// The button keeps the width of its longest label (set once), so the labels swap in place and nothing is resized.
+// The label window keeps the width of the longest label (measured once), so the labels swap in place: the icon
+// does not move and the leaving label is never cut.
 function setCopyLabel(text,direction){
-  if(!copyButton.style.minWidth)copyButton.style.minWidth=`${Math.ceil(copyButton.getBoundingClientRect().width)}px`;
-  swapText(copyLabel.parentElement,copyLabel,text,direction);
+  const frame=copyLabel.parentElement;
+  if(!frame.style.width)frame.style.width=`${Math.ceil(frame.getBoundingClientRect().width)}px`;
+  swapText(frame,copyLabel,text,direction);
 }
 function confirmCopy(detail){
   clearTimeout(copyTimer);
@@ -386,29 +447,39 @@ function confirmCopy(detail){
   copyTimer=setTimeout(()=>{copyButton.classList.remove('is-copied');setCopyLabel('Скопировать команду',-1);},2400);
 }
 el('terminal').addEventListener('animationend',event=>{if(event.pseudoElement==='::after')el('terminal').classList.remove('is-captured');});
-copyButton.addEventListener('click',async()=>{
+let copying=false;
+copyButton.addEventListener('click',async event=>{
+  // A double click is one copy: the second click would replace the command with art by the one without it.
+  if(copying||event.detail>1)return;
   const key=commandKey(),repeat=copiedOnce.has(key);
   // After the first copy the terminal keeps showing the copied text; a repeat copy first redraws it without the art,
   // so the page again shows exactly what goes to the clipboard.
   if(repeat&&shownCommand!==currentCommand())showCommand({flash:true});
-  copiedOnce.add(key);
+  copying=true;
   try{
     await navigator.clipboard.writeText(shownCommand);
+    copiedOnce.add(key);
     confirmCopy(repeat?'Без заставки: так повторный запуск короче':'Проверьте её перед запуском');
   }catch{
     const range=document.createRange(); range.selectNodeContents(el('command'));
     const selection=window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
     TraceUI.notify({title:'Команда выделена',detail:'Нажмите Ctrl+C, чтобы скопировать'});
-  }
+  }finally{copying=false;}
 });
+// «Скопировано» belongs to the command that was copied: another command in the terminal takes the label back.
+function resetCopied(){
+  if(!copyButton.classList.contains('is-copied'))return;
+  clearTimeout(copyTimer);copyButton.classList.remove('is-copied');setCopyLabel('Скопировать команду',-1);
+}
 
 el('instructions').addEventListener('click',event=>{
   const method=methods[activeMethod],gameKey=el('game').value;
   el('guide-title').textContent=method.guideTitle;
+  const paragraph=text=>{const p=document.createElement('p');p.textContent=text;return p;};
   const list=document.createElement('ol');
-  for(const step of method.guide){const item=document.createElement('li');item.textContent=step;list.append(item);}
-  const notes=[gameKey==='minecraft'&&activeTask==='all'?tracePro:null,manualGuide[gameKey]].filter(Boolean).map(text=>{const p=document.createElement('p');p.textContent=text;return p;});
-  el('guide-body').replaceChildren(list,...notes);
+  for(const step of method.steps){const item=document.createElement('li');item.textContent=step;list.append(item);}
+  const notes=[...method.notes,gameKey==='minecraft'&&activeTask==='all'?tracePro:null].filter(Boolean).map(paragraph);
+  el('guide-body').replaceChildren(paragraph(consent),list,...notes);
   TraceUI.openDialog(el('guide'),event.currentTarget);
 });
 
@@ -427,7 +498,11 @@ if(Object.hasOwn(games,wantedGame))el('game').value=wantedGame;
 if(Object.hasOwn(tasks,wantedTask)&&games[el('game').value].tasks.includes(wantedTask))activeTask=wantedTask;
 syncGameChoice();
 selectMethod(['powershell','cmd','manual'].includes(wantedMethod)?wantedMethod:'powershell',{animated:false});
+addEventListener('pageshow',()=>{
+  if(gameValue.textContent===nativeGame.selectedOptions[0].textContent&&activeGame===nativeGame.value)return;
+  syncGameChoice();renderSelection({animated:false});
+});
 
 if(navigator.modelContext?.registerTool){
-  navigator.modelContext.registerTool({name:'select_check_method',description:'Select a TRACE instruction method, game and task. This only changes the visible page; it does not execute commands or read the computer.',inputSchema:{type:'object',properties:{method:{type:'string',enum:['powershell','cmd','manual']},game:{type:'string',enum:Object.keys(games)},task:{type:'string',enum:Object.keys(tasks)}},required:['method'],additionalProperties:false},execute:async({method,game,task})=>{if(!methods[method]||(game&&!games[game])||(task&&!tasks[task]))throw new Error('Unknown method, game or task');if(game){el('game').value=game;syncGameChoice();}if(task&&games[el('game').value].tasks.includes(task))activeTask=task;renderSelection();selectMethod(method);return{content:[{type:'text',text:`${method} / ${el('game').value} / ${activeTask}`}]}}});
+  navigator.modelContext.registerTool({name:'select_check_method',description:'Select a TRACE instruction method, game and task. This only changes the visible page; it does not execute commands or read the computer.',inputSchema:{type:'object',properties:{method:{type:'string',enum:['powershell','cmd','manual']},game:{type:'string',enum:Object.keys(games)},task:{type:'string',enum:Object.keys(tasks)}},required:['method'],additionalProperties:false},execute:async({method,game,task})=>{if(!['powershell','cmd','manual'].includes(method)||(game&&!Object.hasOwn(games,game))||(task&&!Object.hasOwn(tasks,task)))throw new Error('Unknown method, game or task');if(game){el('game').value=game;syncGameChoice();}if(task&&games[el('game').value].tasks.includes(task))activeTask=task;renderSelection();selectMethod(method);return{content:[{type:'text',text:`${method} / ${el('game').value} / ${activeTask}`}]}}});
 }

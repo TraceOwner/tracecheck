@@ -17,7 +17,7 @@ export const homePage = `
 </section>
 <section id="methods" class="methods container" aria-labelledby="methods-title">
   <header class="methods-head"><p class="eyebrow">Способы проверки</p><h2 id="methods-title" class="display-m">Три способа<br><em>проверить ПК.</em></h2><p>Команда показана на странице целиком. Сначала прочитайте её, потом запускайте.</p></header>
-  <ul class="methods-list">${method('powershell','PowerShell','Одна задача или всё сразу','Процессы, Prefetch, реестр, корзину, Defender, автозапуск, журналы, папки игры. Для Minecraft ещё классы внутри JAR','Работает без них. С правами администратора видит больше','Список находок в окне. Для Minecraft отчёт JSON и CSV, если выбрать пункт 5')}${method('cmd','CMD','Те же задачи из командной строки','Те же источники, что PowerShell: команда запускает его одной строкой','Лучше запускать от имени администратора','Список находок в окне. «Всё сразу» запускает скачанный файл .ps1')}${method('manual','Вручную','Без терминала','То, что вы откроете сами: Диспетчер задач, папку игры, свойства файлов','Не нужны','Чек-лист с вашими отметками в файле .txt')}</ul>
+  <ul class="methods-list">${method('powershell','PowerShell','Одна задача или всё сразу','Процессы, Prefetch, реестр, корзину, Defender, автозапуск, журналы, папки игры. Для Minecraft ещё пакеты внутри JAR','Работает без них. С&nbsp;правами администратора видит больше','Список находок в окне. Для Minecraft отчёт JSON и CSV, если выбрать пункт&nbsp;5')}${method('cmd','CMD','Те же задачи в CMD','Те же источники, что PowerShell: команда запускает его одной строкой','Работает без них. С&nbsp;правами администратора видит больше','Список находок в окне. «Всё&nbsp;сразу» запускает скачанный файл&nbsp;.ps1')}${method('manual','Вручную','Без терминала','То, что вы откроете сами: Диспетчер задач, папку игры, свойства файлов','Не нужны','Чек-лист с вашими отметками в файле&nbsp;.txt')}</ul>
 </section>
 <section class="night-statement" aria-labelledby="principle-title">
   <div class="night-ghost" aria-hidden="true"><span>совпадение</span></div>
@@ -25,7 +25,7 @@ export const homePage = `
 </section>
 <section class="ecosystem container" aria-labelledby="ecosystem-title">
   <header class="ecosystem-heading"><p class="eyebrow">Игры</p><h2 id="ecosystem-title" class="display-m">Своя проверка<br><em>для каждой игры.</em></h2><p>Названия и папки для поиска зависят от игры. Правила сервера сверяйте на его официальном сайте.</p></header>
-  <ul class="ecosystem-list">${game('minecraft','Minecraft','FunTime, SpookyTime, ReallyWorld, HolyWorld')}${game('gta','GTA V RP','GTA5RP, Majestic')}${game('cs2','Counter-Strike 2','Процессы, файлы игры, Prefetch')}</ul>
+  <ul class="ecosystem-list">${game('minecraft','Minecraft','FunTime, SpookyTime, ReallyWorld, HolyWorld')}${game('gta','GTA V RP','GTA5RP, Majestic')}${game('cs2','Counter-Strike 2','Neverlose, AIMWARE, Memesense, Nixware')}</ul>
   <a class="text-link ecosystem-all" href="projects.html">Официальные сайты и правила серверов ${arrow}</a>
 </section>
 <section class="final-cta" aria-labelledby="final-title"><div class="container"><h2 id="final-title" class="display-l">Проверка начинается<br><em>с одной команды.</em></h2></div></section>

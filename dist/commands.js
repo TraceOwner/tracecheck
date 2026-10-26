@@ -21,13 +21,11 @@
 
   const q = text => `'${String(text).replaceAll("'", "''")}'`;
   const list = items => items.map(q).join(', ');
-  const user = String.raw`($env:USERPROFILE + '\Downloads')`;
-  const shared = [user, `[Environment]::GetFolderPath('Desktop')`, '$env:TEMP'];
-  const steam = name => String.raw`($steam + '\steamapps\common\${name}')`;
+  const shared = ['$downloads', `[Environment]::GetFolderPath('Desktop')`, '$env:TEMP'];
 
   /* What each task reads. `admin` marks tasks that see less without administrator rights. */
   const tasks = {
-    all: {title: 'Всё сразу', note: 'все источники ниже, кроме дисков', admin: true},
+    all: {title: 'Всё сразу', note: 'все задачи, кроме «Все диски»', admin: true},
     processes: {title: 'Процессы', note: 'запущенные программы и DLL в игре'},
     prefetch: {title: 'Prefetch', note: 'какие EXE запускались', admin: true},
     registry: {title: 'Реестр', note: 'BAM, UserAssist, Win+R, MuiCache', admin: true},
@@ -38,23 +36,23 @@
     hosts: {title: 'hosts', note: 'перенаправленные адреса'},
     folders: {title: 'Папки игры', note: 'имена файлов, «Загрузки», рабочий стол'},
     jar: {title: 'Классы в JAR', note: 'имена пакетов внутри модов'},
-    drives: {title: 'Все диски', note: 'имена файлов, долго'}
+    drives: {title: 'Все диски', note: 'имена файлов на дисках и флешках', admin: true}
   };
 
   /* What a task does, in one line on the page. */
   const about = {
-    all: 'Проходит по всем источникам ниже, кроме полного обхода дисков, и выводит один общий список.',
-    processes: 'Имена и пути запущенных программ и DLL, загруженные в процесс игры. DLL из Temp и «Загрузок» показываются всегда.',
+    all: 'Проходит по всем задачам из списка, кроме «Все диски», и выводит один общий список.',
+    processes: 'Имена и пути запущенных программ и DLL, загруженные в процесс игры. DLL из Temp и «Загрузок» показываются всегда. Процесс, закрытый античитом, команда перечислит в конце.',
     prefetch: 'Windows записывает в Prefetch, какие EXE запускались и когда. Команда ищет известные названия среди этих записей и замечает выключенный или почти пустой Prefetch. Нужны права администратора.',
-    registry: 'История запусков из реестра: BAM (с временем запуска), UserAssist, окно «Выполнить» (Win+R), Compatibility Assistant и MuiCache. BAM читается только с правами администратора.',
+    registry: 'История запусков из реестра: BAM (время запуска и учётная запись), UserAssist, окно «Выполнить» (Win+R), Compatibility Assistant и MuiCache. BAM читается только с правами администратора.',
     recycle: 'Имена файлов в корзине, их исходные папки и дата удаления.',
-    defender: 'Все папки и процессы, исключённые из проверки Microsoft Defender, и выключенная защита в реальном времени. Исключения видны только администратору.',
+    defender: 'Все папки, процессы и расширения, исключённые из проверки Microsoft Defender, и выключенная защита в реальном времени. Исключения видны только администратору.',
     autostart: 'Задания планировщика, разделы Run в реестре и папки автозагрузки.',
     services: 'Остановленные или выключенные PcaSvc, SysMain, DPS и EventLog и записи об очистке журналов Windows. Журнал Security виден только администратору.',
     hosts: 'Все действующие строки файла hosts: перенаправленный адрес может отрезать игру или античит от сервера.',
-    folders: 'Имена файлов и папок в папках игры и лаунчеров, в «Загрузках», на рабочем столе и во временной папке.',
-    jar: 'Открывает каждый JAR в папках лаунчеров и ищет известные имена пакетов среди классов. Поведение программы не анализируется.',
-    drives: 'Имена файлов на всех локальных дисках. Может занять долго; остановить можно Ctrl+C.'
+    folders: 'Имена файлов и папок в папках игры и лаунчеров, в «Загрузках», на рабочем столе и во временной папке. Если есть папка самого чита из списка, она тоже попадёт в список.',
+    jar: 'Открывает каждый JAR в папках лаунчеров и ищет известные пакеты, то есть папки внутри архива вроде ru/nursultan. Поведение программы не анализируется.',
+    drives: 'Имена файлов на всех дисках и флешках. Может занять долго; остановить можно Ctrl+C, найденное к этому моменту команда покажет.'
   };
 
   const games = {
@@ -66,7 +64,7 @@
       jar: () => pro().jarSignatures,
       roots: () => [...pro().gameRoots.filter(path => !/Downloads|Temp/.test(path)), ...shared],
       modules: ['java', 'javaw'],
-      source: 'Список из сценария TRACE-PRO: клиенты для анархий, ghost-клиенты, автокликеры и программы для очистки следов.'
+      source: 'Список из сценария TRACE-PRO: клиенты для анархий, ghost-клиенты, автокликеры, программы для очистки следов и спуферы.'
     },
     gta: {
       label: 'GTA V RP',
@@ -75,9 +73,11 @@
       // Majestic products. Single common words are marked weak: their hits are shown as possibly false.
       terms: () => ['eulen', 'redengine', 'susano', 'phaze', 'skript.gg', 'skriptgg', 'hx software', 'hxsoftware', 'tz project', 'tzproject', 'keyser', 'kaizer', 'tartar', 'lumia menu', 'vortex menu', 'pulse menu', '2take1', 'cherax', 'yimmenu', 'kiddion', 'modest-menu', 'stand launchpad', 'mason-gta', 'mason cheat', 'nightfall', 'smg-gta', 'smg_cheat', 'smg majestic'],
       weak: () => ['nightfall', 'keyser', 'kaizer', 'tartar', 'phaze'],
-      roots: () => [String.raw`($env:LOCALAPPDATA + '\FiveM')`, String.raw`($env:LOCALAPPDATA + '\GTA5RP')`, String.raw`($env:LOCALAPPDATA + '\Majestic')`, String.raw`($env:APPDATA + '\Majestic')`, String.raw`($env:APPDATA + '\Stand')`, String.raw`($env:SystemDrive + '\RAGEMP')`, String.raw`(Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\WOW6432Node\Rockstar Games\Grand Theft Auto V' -ErrorAction SilentlyContinue).InstallFolder`, steam('Grand Theft Auto V'), ...shared],
+      roots: () => [String.raw`($env:LOCALAPPDATA + '\FiveM')`, String.raw`($env:LOCALAPPDATA + '\GTA5RP')`, String.raw`($env:LOCALAPPDATA + '\Majestic')`, String.raw`($env:APPDATA + '\Majestic')`, String.raw`($env:SystemDrive + '\RAGEMP')`, String.raw`(Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\WOW6432Node\Rockstar Games\Grand Theft Auto V' -ErrorAction SilentlyContinue).InstallFolder`, String.raw`($env:ProgramFiles + '\Epic Games\GTAV')`, ...shared],
+      // Folders that only a cheat makes: if one exists, it is a finding in itself, whatever is inside.
+      cheatRoots: [String.raw`($env:APPDATA + '\Stand')`],
+      steamGames: ['Grand Theft Auto V', 'Grand Theft Auto V Enhanced'],
       modules: ['GTA5', 'GTA5_Enhanced', 'FiveM*'],
-      steam: true,
       source: 'Меню для FiveM из списков античитов (Eulen, RedEngine, Susano, Skript.gg, HX, TZ Project и другие), меню для GTA Online и названия, под которыми продают читы для GTA5RP и Majestic.'
     },
     cs2: {
@@ -85,42 +85,60 @@
       tasks: ['all', 'processes', 'prefetch', 'registry', 'recycle', 'defender', 'autostart', 'services', 'hosts', 'folders', 'drives'],
       terms: () => ['neverlose', 'aimware', 'memesense', 'nixware', 'midnight.im', 'osiris', 'osiriscs2'],
       weak: () => ['osiris'],
-      roots: () => [String.raw`($env:APPDATA + '\OsirisCS2')`, String.raw`($env:APPDATA + '\Neverlose')`, steam('Counter-Strike Global Offensive'), ...shared],
+      roots: () => [...shared],
+      cheatRoots: [String.raw`($env:APPDATA + '\OsirisCS2')`, String.raw`($env:APPDATA + '\Neverlose')`],
+      steamGames: ['Counter-Strike Global Offensive'],
       modules: ['cs2'],
-      steam: true,
       source: 'Платные и открытые читы, у которых есть версия для CS2. Переименованный файл или чит внутри другого процесса поиск по имени не найдёт; это не замена VAC.'
     }
   };
 
   /* ───── Blocks ───── */
+  // Distinctive names are found inside longer names (NursultanClient.jar, EulenLoader.exe); common words and other
+  // programs (game.weak) only as a separate word, so 'osiris' does not fire on every word that contains it. The
+  // lookarounds are written without "!": cmd.exe with delayed expansion would eat the text between two of them.
+  const matcher = game => {
+    const weak = new Set(game.weak());
+    const strong = game.terms().filter(term => !weak.has(term)).sort((a, b) => b.length - a.length);
+    const escaped = name => `(($${name} | ForEach-Object { [regex]::Escape($_) }) -join '|')`;
+    return [
+      `$strong = @(${list(strong)})`,
+      `$weak = @(${list([...weak])})`,
+      `$rx = [regex]::new('(?<s>' + ${escaped('strong')} + ')|(?<=^|[^a-z0-9])(?<w>' + ${escaped('weak')} + ')(?=[^a-z0-9]|$)', 'IgnoreCase')`
+    ];
+  };
+
   const core = game => [
     `$ErrorActionPreference = 'SilentlyContinue'`,
-    `$terms = @(${list(game.terms())})`,
-    `$weak = @(${list(game.weak())})`,
-    String.raw`$rx = [regex]::new('(?<![a-z0-9])(' + (($terms | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')(?![a-z0-9])', 'IgnoreCase')`,
+    ...matcher(game),
     `$admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)`,
     `$hits = New-Object System.Collections.ArrayList`,
     `$notes = New-Object System.Collections.ArrayList`,
-    `$stat = @{ Files = 0; Jars = 0 }`,
-    `function Add-TraceHit([string]$source, [string]$object, [string]$detail) {`,
-    `  [void]$hits.Add([pscustomobject]@{ Source = $source; Object = $object; Detail = $detail })`,
+    `$stat = @{ Files = 0; Jars = 0; Denied = 0 }`,
+    `function Add-TraceHit([string]$source, [string]$object, [string]$detail, [bool]$weak = $false) {`,
+    `  [void]$hits.Add([pscustomobject]@{ Source = $source; Object = $object; Detail = $detail; Weak = $weak })`,
     `}`,
     `function Add-TraceNote([string]$text) {`,
     `  if (-not $notes.Contains($text)) { [void]$notes.Add($text) }`,
     `}`,
+    // The profile folder (C:\Users\<name>) is left out of the match: the Windows user name is not a finding.
     `function Find-TraceName([string]$source, [string]$text, [string]$object, [string]$detail) {`,
-    `  $match = $rx.Match($text)`,
-    `  if (-not $match.Success) { return }`,
-    `  $word = $match.Groups[1].Value.ToLower()`,
-    `  $info = 'название ' + $word`,
-    `  if ($weak -contains $word) { $info += ', общее слово: возможно ложное совпадение' }`,
+    `  $best = $null`,
+    String.raw`  foreach ($m in $rx.Matches(($text -replace '(?i)[\\/]Users[\\/][^\\/]+', '\Users\~'))) { if ($m.Groups['s'].Success) { $best = $m; break }; if (-not $best) { $best = $m } }`,
+    `  if (-not $best) { return }`,
+    `  $isWeak = -not $best.Groups['s'].Success`,
+    `  $info = 'название ' + $best.Value.ToLower()`,
+    `  if ($isWeak) { $info += ', общее слово или обычная программа: возможно ложное совпадение' }`,
     `  if ($detail) { $info += '; ' + $detail }`,
     `  if (-not $object) { $object = $text }`,
-    `  Add-TraceHit $source $object $info`,
+    `  Add-TraceHit $source $object $info $isWeak`,
     `}`,
     `function Write-TraceStep([string]$text) {`,
     `  Write-Host ('  > ' + $text) -ForegroundColor DarkGray`,
-    `}`
+    `}`,
+    // Elevated with another account's password, the command reads that account's folders and history, not the player's.
+    String.raw`$owner = Get-CimInstance Win32_Process -Filter 'Name = ''explorer.exe''' | Select-Object -First 1 | Invoke-CimMethod -MethodName GetOwner`,
+    `if ($owner.User -and $owner.User -ne $env:USERNAME) { Write-Host ('Команда запущена от имени ' + $env:USERNAME + ', а в Windows работает ' + $owner.User + ': папки и история ' + $owner.User + ' не проверяются. Запустите терминал из учётной записи игрока.') -ForegroundColor Yellow }`
   ];
 
   // Walks folders without following links; a stack instead of -Recurse lets it skip system stores and junction loops.
@@ -136,26 +154,31 @@
     String.raw`    if ($dir -match '\\(WinSxS|servicing|\$Recycle\.Bin|System Volume Information|node_modules|\.git)$') { continue }`,
     `    $dirs++`,
     `    if (-not ($dirs -band 63)) { Write-Progress -Activity 'TRACE' -Status ('Файлов: ' + $stat.Files + ' · ' + $dir) }`,
-    `    foreach ($item in @(Get-ChildItem -LiteralPath $dir -Force -ErrorAction SilentlyContinue)) {`,
+    `    foreach ($item in @(Get-ChildItem -LiteralPath $dir -Force -ErrorAction SilentlyContinue -ErrorVariable denied)) {`,
     `      if ($item.PSIsContainer) { if (-not ($item.Attributes -band 1024)) { $stack.Push($item.FullName) } } else { $stat.Files++ }`,
     `      Find-TraceName 'Файл' $item.Name $item.FullName ('изменён ' + $item.LastWriteTime.ToString('dd.MM.yyyy HH:mm'))`,
     `    }`,
+    `    if ($denied) { $stat.Denied++ }`,
     `  }`,
     `  Write-Progress -Activity 'TRACE' -Completed`,
     `}`
   ];
 
+  // A package is a folder inside the archive (ru/nursultan/...), never a class name: Twilight Forest has a Raven class.
   const jarCheck = game => [
     `Add-Type -AssemblyName System.IO.Compression.FileSystem`,
     `$signatures = @(${list(game.jar())})`,
-    String.raw`$sig = [regex]::new('(^|/)(' + (($signatures | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')(/|\$|\.class$)', 'IgnoreCase')`,
+    String.raw`$sig = [regex]::new('(^|/)(' + (($signatures | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')/', 'IgnoreCase')`,
     `function Find-TraceJar($file) {`,
     `  if ($file.Length -gt 268435456) { Add-TraceNote ('JAR больше 256 МБ пропущен: ' + $file.FullName); return }`,
+    // A file kept only in OneDrive would be downloaded by opening it.
+    `  if ($file.Attributes -band 0x441000) { Add-TraceNote ('JAR лежит только в облаке и не открывался: ' + $file.FullName); return }`,
     `  try { $zip = [IO.Compression.ZipFile]::OpenRead($file.FullName) } catch { Add-TraceNote ('JAR не прочитан: ' + $file.FullName); return }`,
     `  $stat.Jars++`,
     `  try {`,
     `    foreach ($entry in $zip.Entries) {`,
-    `      if ($entry.FullName -like '*.class' -and $sig.IsMatch($entry.FullName)) { Add-TraceHit 'Класс в JAR' $file.FullName ('запись ' + $entry.FullName + '; проверяются имена классов, а не поведение'); break }`,
+    `      $m = $sig.Match($entry.FullName)`,
+    `      if ($m.Success -and $entry.FullName -like '*.class') { Add-TraceHit 'Пакет в JAR' $file.FullName ('пакет ' + $m.Groups[2].Value.ToLower() + ', запись ' + $entry.FullName + '; проверяются имена пакетов, а не поведение'); break }`,
     `    }`,
     `  } finally {`,
     `    $zip.Dispose()`,
@@ -163,31 +186,45 @@
     `}`
   ];
 
+  // Downloads and Desktop are taken where Windows keeps them (OneDrive, another disk); Steam games in every library.
   const roots = game => [
-    ...(game.steam ? [`$steam = [string](Get-ItemProperty -LiteralPath 'HKCU:\\Software\\Valve\\Steam' -ErrorAction SilentlyContinue).SteamPath`] : []),
-    `$roots = @(${game.roots().join(', ')})`
+    String.raw`$downloads = $env:USERPROFILE + '\Downloads'`,
+    `try { $shellDownloads = (New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path; if ($shellDownloads) { $downloads = $shellDownloads } } catch {}`,
+    `$roots = @(${game.roots().join(', ')})`,
+    ...(game.steamGames ? [
+      String.raw`$steam = [string](Get-ItemProperty -LiteralPath 'HKCU:\Software\Valve\Steam').SteamPath`,
+      `$libraries = @($steam)`,
+      String.raw`$vdf = [string](Get-Content -LiteralPath ($steam + '\steamapps\libraryfolders.vdf') -Raw)`,
+      String.raw`foreach ($m in [regex]::Matches($vdf, '\x22path\x22\s+\x22([^\x22]+)\x22')) { $libraries += $m.Groups[1].Value -replace '\\\\', '\' }`,
+      String.raw`foreach ($lib in @($libraries | Where-Object { $_ } | Select-Object -Unique)) { foreach ($name in @(${list(game.steamGames)})) { $roots += $lib + '\steamapps\common\' + $name } }`
+    ] : []),
+    ...(game.cheatRoots ? [`$cheatRoots = @(${game.cheatRoots.join(', ')})`, `$roots += $cheatRoots`] : [])
   ];
 
   const steps = {
     processes: game => [
       `Write-TraceStep 'Процессы'`,
-      `foreach ($p in @(Get-CimInstance Win32_Process)) {`,
+      `try { $procs = @(Get-CimInstance Win32_Process -ErrorAction Stop) } catch { $procs = @(Get-Process | ForEach-Object { [pscustomobject]@{ Name = $_.ProcessName + '.exe'; ExecutablePath = $_.Path; ProcessId = $_.Id; CommandLine = '' } }); Add-TraceNote 'WMI не ответил: процессы взяты из Get-Process, без строк запуска.' }`,
+      `foreach ($p in $procs) {`,
       `  $object = [string]$p.ExecutablePath`,
       `  if (-not $object) { $object = [string]$p.Name }`,
       `  Find-TraceName 'Процесс' ([string]$p.Name + ' ' + $object) $object ('PID ' + $p.ProcessId)`,
       ...(game === games.minecraft ? [
+        // The launch line holds the session token and the player's name; only the agent path, the two options and a
+        // matched name are shown, never the line.
         `  if ($p.Name -like 'java*') {`,
         `    $line = [string]$p.CommandLine`,
-        String.raw`    foreach ($agent in [regex]::Matches($line, '-javaagent:(\x22[^\x22]+\x22|\S+)')) { Add-TraceHit 'Java: -javaagent' $agent.Groups[1].Value ('PID ' + $p.ProcessId + '; агент встраивается в игру, проверьте этот файл') }`,
-        String.raw`    if ($line -match '\s(-noverify|-Xbootclasspath\S*)') { Add-TraceHit 'Java: аргумент' $Matches[1] ('PID ' + $p.ProcessId + '; отключает проверку классов или подменяет их') }`,
-        `    foreach ($word in $rx.Matches($line)) { Add-TraceHit 'Java: строка запуска' $word.Groups[1].Value ('PID ' + $p.ProcessId) }`,
+        String.raw`    foreach ($agent in [regex]::Matches($line, '-javaagent:(.+?\.jar)(?=[\s\x22=]|$)')) { Add-TraceHit 'Java: -javaagent' $agent.Groups[1].Value ('PID ' + $p.ProcessId + '; агент встраивается в игру, проверьте этот файл') }`,
+        String.raw`    foreach ($flag in [regex]::Matches($line, '(?:^|[\s\x22])(-noverify|-Xbootclasspath[^\s\x22]*)')) { Add-TraceHit 'Java: аргумент' $flag.Groups[1].Value ('PID ' + $p.ProcessId + '; отключает проверку классов или подменяет их') }`,
+        String.raw`    Find-TraceName 'Java: строка запуска' ($line -replace '(?i)--(username|uuid|xuid|accessToken|clientId)\s+\S+', '') ('java, PID ' + $p.ProcessId) 'сама строка не выводится'`,
         `  }`
       ] : []),
       `}`,
       `foreach ($g in @(Get-Process -Name ${list(game.modules)} -ErrorAction SilentlyContinue)) {`,
-      `  try { $mods = @($g.Modules) } catch { Add-TraceNote ('DLL процесса ' + $g.Name + ' не прочитаны: нужны права администратора.'); continue }`,
+      // The method, not the property: PowerShell turns an exception inside a property into an empty value.
+      `  try { $mods = @($g.get_Modules()) } catch { Add-TraceNote ('DLL процесса ' + $g.Name + ' не прочитаны: процесс закрыт античитом или нужны права администратора.'); continue }`,
       `  foreach ($mod in $mods) {`,
-      `    Find-TraceName ('DLL в ' + $g.Name) $mod.ModuleName $mod.FileName ('PID ' + $g.Id)`,
+      `    Find-TraceName ('DLL в ' + $g.Name) $mod.FileName $mod.FileName ('PID ' + $g.Id)`,
       String.raw`    if ($mod.FileName -match '\\(AppData\\Local\\Temp|Downloads)\\') { Add-TraceHit ('DLL в ' + $g.Name) $mod.FileName ('PID ' + $g.Id + '; загружена из Temp или «Загрузок»') }`,
       `  }`,
       `}`
@@ -207,12 +244,16 @@
     registry: () => [
       `Write-TraceStep 'Реестр'`,
       String.raw`foreach ($base in 'HKLM:\SYSTEM\CurrentControlSet\Services\bam\State\UserSettings', 'HKLM:\SYSTEM\CurrentControlSet\Services\dam\State\UserSettings') {`,
+      `  if (-not (Test-Path -LiteralPath $base)) { continue }`,
       `  try { $users = @(Get-ChildItem -LiteralPath $base -ErrorAction Stop) } catch { Add-TraceNote 'BAM не прочитан: нужны права администратора.'; continue }`,
       `  foreach ($key in $users) {`,
+      // BAM keeps every account of the PC; the account is named so a sibling's history is not taken for the player's.
+      `    $account = $key.PSChildName`,
+      `    try { $account = (New-Object Security.Principal.SecurityIdentifier($key.PSChildName)).Translate([Security.Principal.NTAccount]).Value } catch {}`,
       `    foreach ($name in $key.GetValueNames()) {`,
       `      $value = $key.GetValue($name)`,
-      `      $when = ''`,
-      `      if ($value -is [byte[]] -and $value.Length -ge 8) { $when = 'запуск ' + [DateTime]::FromFileTime([BitConverter]::ToInt64($value, 0)).ToString('dd.MM.yyyy HH:mm') }`,
+      `      $when = 'учётная запись ' + $account`,
+      `      if ($value -is [byte[]] -and $value.Length -ge 8) { $when += ', запуск ' + [DateTime]::FromFileTime([BitConverter]::ToInt64($value, 0)).ToString('dd.MM.yyyy HH:mm') }`,
       `      Find-TraceName 'BAM' $name $name $when`,
       `    }`,
       `  }`,
@@ -241,7 +282,7 @@
       `Write-TraceStep 'Корзина'`,
       `try {`,
       `  $bin = (New-Object -ComObject Shell.Application).NameSpace(10)`,
-      String.raw`  foreach ($item in @($bin.Items())) { Find-TraceName 'Корзина' $item.Name ($bin.GetDetailsOf($item, 1) + '\' + $item.Name) ('удалён ' + $bin.GetDetailsOf($item, 2)) }`,
+      String.raw`  foreach ($item in @($bin.Items())) { Find-TraceName 'Корзина' $item.Name ($bin.GetDetailsOf($item, 1) + '\' + $item.Name) ('удалён ' + ($bin.GetDetailsOf($item, 2) -replace '[\u200e\u200f]', '')) }`,
       `} catch {`,
       `  Add-TraceNote 'Корзина не прочитана.'`,
       `}`
@@ -250,13 +291,14 @@
       `Write-TraceStep 'Defender'`,
       `try {`,
       `  $mp = Get-MpPreference -ErrorAction Stop`,
-      `  foreach ($path in @($mp.ExclusionPath) + @($mp.ExclusionProcess)) {`,
-      `    if (-not $path) { continue }`,
-      `    if ($path -like 'N/A*') { Add-TraceNote 'Исключения Defender видны только администратору.'; continue }`,
-      `    Add-TraceHit 'Defender: исключение' $path 'этот путь антивирус не проверяет; выясните, кто и зачем его добавил'`,
+      // Without administrator rights Defender returns an "N/A ..." line instead of the list; it is not an exclusion.
+      `  if ($admin) {`,
+      `    foreach ($path in @($mp.ExclusionPath) + @($mp.ExclusionProcess) + @($mp.ExclusionExtension)) { if ($path -and $path -notlike 'N/A*') { Add-TraceHit 'Defender: исключение' $path 'это антивирус не проверяет; выясните, кто и зачем это добавил' } }`,
+      `  } else {`,
+      `    Add-TraceNote 'Исключения Defender видны только администратору.'`,
       `  }`,
       `  $status = Get-MpComputerStatus -ErrorAction SilentlyContinue`,
-      `  if ($status -and -not $status.RealTimeProtectionEnabled) { Add-TraceHit 'Defender' 'Защита в реальном времени выключена' 'если стоит другой антивирус, это нормально' }`,
+      `  if ($status.AMRunningMode -and $status.AMRunningMode -ne 'Normal') { Add-TraceNote ('Defender в режиме ' + $status.AMRunningMode + ': компьютер защищает другой антивирус.') } elseif ($status -and -not $status.RealTimeProtectionEnabled) { Add-TraceHit 'Defender' 'Защита в реальном времени выключена' 'выясните, кто и когда её выключил' }`,
       `} catch {`,
       `  Add-TraceNote 'Defender не ответил: возможно, его заменяет другой антивирус.'`,
       `}`
@@ -293,25 +335,28 @@
       String.raw`  if ($line -and -not $line.StartsWith('#') -and $line -notmatch '\slocalhost$') { Add-TraceHit 'hosts' $line 'адрес перенаправлен; проверьте, чей это домен' }`,
       `}`
     ],
-    folders: () => [
+    folders: game => [
       `Write-TraceStep 'Папки игры'`,
+      ...(game.cheatRoots ? [`foreach ($dir in $cheatRoots) { if (Test-Path -LiteralPath $dir) { Add-TraceHit 'Папка' $dir 'папка программы из списка; посмотрите, что в ней' } }`] : []),
       `Find-TraceFiles $roots`
     ],
     jar: () => [
-      `Write-TraceStep 'Классы в JAR'`,
+      `Write-TraceStep 'Пакеты в JAR'`,
       `foreach ($root in $roots) {`,
       `  if ($root -and (Test-Path -LiteralPath $root -PathType Container)) { foreach ($file in @(Get-ChildItem -LiteralPath $root -Filter *.jar -File -Recurse -Force -ErrorAction SilentlyContinue)) { Find-TraceJar $file } }`,
       `}`
     ],
     drives: () => [
-      `Write-TraceStep 'Все локальные диски. Это долго; остановить можно Ctrl+C'`,
-      String.raw`Find-TraceFiles @(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | ForEach-Object { $_.DeviceID + '\' })`
+      `Write-TraceStep 'Все диски и флешки. Это долго; остановить можно Ctrl+C'`,
+      `Find-TraceFiles @([IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and ($_.DriveType -eq 'Fixed' -or $_.DriveType -eq 'Removable') } | ForEach-Object { $_.RootDirectory.FullName })`
     ]
   };
 
+  // Runs in finally: Ctrl+C during a long walk still prints what was found. Clear names first, weak words last.
   const report = [
+    `Write-Progress -Activity 'TRACE' -Completed`,
     `Write-Host ''`,
-    `$found = @($hits | Sort-Object Source, Object -Unique)`,
+    `$found = @($hits | Sort-Object Source, Object, Detail -Unique | Sort-Object Weak, Source, Object)`,
     `if ($found.Count) {`,
     `  foreach ($hit in @($found | Select-Object -First 300)) {`,
     `    Write-Host ('[' + $hit.Source + '] ' + $hit.Object) -ForegroundColor White`,
@@ -325,6 +370,7 @@
     `}`,
     `if ($stat.Files) { Write-Host ('Файлов просмотрено: ' + $stat.Files) -ForegroundColor DarkGray }`,
     `if ($stat.Jars) { Write-Host ('JAR открыто: ' + $stat.Jars) -ForegroundColor DarkGray }`,
+    `if ($stat.Denied) { Add-TraceNote ('папок, которые не открылись: ' + $stat.Denied + '; их содержимое не проверено.') }`,
     `foreach ($note in $notes) { Write-Host ('Не проверено: ' + $note) -ForegroundColor DarkYellow }`,
     `Write-Host 'Совпадение — повод разобраться, а не доказательство. Пустой результат не доказывает, что ПК чист.' -ForegroundColor DarkGray`
   ];
@@ -351,8 +397,11 @@
       ...(parts.includes('jar') ? jarCheck(game) : []),
       ...(needsWalker ? walker : []),
       ...(needsRoots ? roots(game) : []),
+      'try {',
       ...parts.flatMap(key => steps[key](game)),
-      ...report
+      '} finally {',
+      ...report,
+      '}'
     ];
   }
 
@@ -371,36 +420,52 @@
 
   // Joins lines into one PowerShell line. After an opening bracket, a comma or a pipe the line goes on, and so it
   // does before a closing bracket or else/elseif/catch/finally; anywhere else a statement ends and gets a semicolon.
-  function oneLine(lines) {
+  // The pieces (each source line with the glue after it) let the page show the one line broken where it was written.
+  function oneLinePieces(lines) {
     const clean = lines.map(line => line.trim()).filter(line => line && !line.startsWith('#'));
-    return clean.reduce((out, line, i) => {
-      if (!i) return line;
-      const glue = /[{(,|]$/.test(out) || /^([})]|(else|elseif|catch|finally)\b)/.test(line) ? ' ' : '; ';
-      return out + glue + line;
-    }, '');
+    return clean.map((line, i) => {
+      const next = clean[i + 1];
+      if (next === undefined) return line;
+      return line + (/[{(,|]$/.test(line) || /^([})]|(else|elseif|catch|finally)\b)/.test(next) ? ' ' : '; ');
+    });
   }
+  const oneLine = lines => oneLinePieces(lines).join('');
 
+  // The page shows TRACE-PRO indented inside its wrapper and without comment lines; the downloadable file keeps them.
   function minecraftAll(withIntro) {
-    return `& {\r\n  $SkipIntro = $${withIntro ? 'false' : 'true'}\r\n  $AnimationOnly = $false\r\n  $Preset = 'minecraft'\r\n${pro()[withIntro ? 'full' : 'compact']}\r\n}`;
+    const block = pro()[withIntro ? 'full' : 'compact'].split(/\r?\n/).filter(line => !/^\s*#/.test(line)).map(line => line ? `  ${line}` : line);
+    return ['& {', `  $SkipIntro = $${withIntro ? 'false' : 'true'}`, '  $AnimationOnly = $false', `  $Preset = 'minecraft'`, ...block, '}'];
   }
+  // A multi-line command as its lines, each but the last ending in CRLF.
+  const asLines = lines => lines.map((line, i) => i < lines.length - 1 ? `${line}\r\n` : line);
+  // A one-line cmd.exe command as its pieces: the wrapper is glued to the first and the last piece.
+  const asOneLine = (head, pieces) => pieces.map((piece, i) => (i ? '' : head) + piece + (i === pieces.length - 1 ? '"' : ''));
 
-  function command(gameKey, method, taskKey, withIntro = true) {
-    if (!games[gameKey] || !tasks[taskKey] || !games[gameKey].tasks.includes(taskKey)) throw new Error(`Unknown command ${gameKey}/${taskKey}`);
+  /* The command as pieces whose concatenation is exactly what is copied. The page draws each piece on its own line
+     (a one-line CMD command is drawn broken where its source lines were) and sets the TRACE art tighter. */
+  function commandPieces(gameKey, method, taskKey, withIntro = true) {
+    if (!Object.hasOwn(games, gameKey) || !Object.hasOwn(tasks, taskKey) || !games[gameKey].tasks.includes(taskKey)) throw new Error(`Unknown command ${gameKey}/${taskKey}`);
     // TRACE-PRO is the whole check for Minecraft in PowerShell; it is too long for one cmd.exe line (8191 characters).
-    if (gameKey === 'minecraft' && taskKey === 'all' && method === 'powershell') return minecraftAll(withIntro);
+    if (gameKey === 'minecraft' && taskKey === 'all' && method === 'powershell') return asLines(minecraftAll(withIntro));
+    if (method === 'cmd' && taskKey === 'all') return cmdFile(gameKey, withIntro);
     const lines = taskLines(gameKey, taskKey, withIntro);
-    if (method === 'cmd') {
-      if (taskKey === 'all') return cmdFile(gameKey, withIntro);
-      return `powershell -NoProfile -Command "${oneLine(lines)}"`;
-    }
-    return ['& {', ...indent(lines, '  '), '}'].join('\r\n');
+    if (method === 'cmd') return asOneLine('powershell -NoProfile -Command "', oneLinePieces(lines));
+    return asLines(['& {', ...indent(lines, '  '), '}']);
   }
+  const command = (...args) => commandPieces(...args).join('');
 
-  // The whole check does not fit into one cmd.exe line, so in CMD it runs the downloaded file of the same check.
+  // The whole check does not fit into one cmd.exe line, so in CMD it runs the downloaded file of the same check: the
+  // newest trace-….ps1 in the Downloads folder, wherever Windows keeps it, so a second download saved as
+  // "trace-gta (1).ps1" is the one that runs. -ExecutionPolicy Bypass applies to this one run only.
   const fileFor = gameKey => gameKey === 'minecraft' ? 'trace-pro-minecraft.ps1' : `trace-${gameKey}.ps1`;
   function cmdFile(gameKey, withIntro) {
-    const extra = gameKey === 'minecraft' ? ` -Preset minecraft${withIntro ? '' : ' -SkipIntro'}` : withIntro ? '' : ' -SkipIntro';
-    return `powershell -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\\Downloads\\${fileFor(gameKey)}"${extra}`;
+    const name = fileFor(gameKey), stem = name.replace(/\.ps1$/, '');
+    const extra = (gameKey === 'minecraft' ? ' -Preset minecraft' : '') + (withIntro ? '' : ' -SkipIntro');
+    const lines = [
+      `$file = Get-ChildItem -LiteralPath (New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path -Filter '${stem}*.ps1' | Sort-Object LastWriteTime -Descending | Select-Object -First 1`,
+      `if ($file) { & $file.FullName${extra} } else { Write-Host 'В папке «Загрузки» нет файла ${name}: скачайте его кнопкой на странице проверки.' -ForegroundColor Yellow }`
+    ];
+    return asOneLine('powershell -NoProfile -ExecutionPolicy Bypass -Command "', oneLinePieces(lines));
   }
 
   // The downloadable whole check for GTA V RP and CS2: the same blocks as the "all" command, as a script file.
@@ -416,5 +481,6 @@
     return [...head, '', 'if (-not $SkipIntro) {', ...indent(art(), '  '), '}', ...indent(body), ''].join('\r\n');
   }
 
-  root.TraceCommands = {games, tasks, about, asciiTrace, command, oneLine, scriptFile, fileFor};
+  // coreLines is for scripts/verify-commands.mjs: it runs the matching rules on test names.
+  root.TraceCommands = {games, tasks, about, asciiTrace, command, commandPieces, oneLine, scriptFile, fileFor, coreLines: gameKey => core(games[gameKey])};
 })();

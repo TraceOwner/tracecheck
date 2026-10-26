@@ -30,7 +30,10 @@
     legalLayout.prepend(scene);
   }
   const sceneByPage={check:1,methodology:2,projects:3,tools:4};
-  const terminalMode=()=>({powershell:0,cmd:1,manual:2})[document.body.dataset.terminalMode]??0;
+  const modes={powershell:0,cmd:1,manual:2};
+  const terminalMode=()=>Object.hasOwn(modes,document.body.dataset.terminalMode)?modes[document.body.dataset.terminalMode]:0;
+  // The 404 page is served at any depth (/a/b/c), so the worker and the core are found next to this script.
+  const here=document.currentScript?.src||location.href;
   const offscreen='Worker' in window && 'OffscreenCanvas' in window && 'transferControlToOffscreen' in HTMLCanvasElement.prototype;
   const hosts=new Map();
   let worker=null,nextId=1,core=null,modal=false;
@@ -38,7 +41,7 @@
   function getWorker(){
     if(worker!==null)return worker||null;
     try{
-      worker=new Worker('smoke-worker.js');
+      worker=new Worker(new URL('smoke-worker.js',here));
       worker.onmessage=({data})=>hosts.get(data.id)?.message(data);
       // A worker that cannot start hands every canvas back to the page.
       worker.onerror=()=>{worker.terminate();worker=false;hosts.forEach(stage=>stage.recover());};
@@ -49,7 +52,7 @@
     return core??=new Promise(resolve=>{
       if(window.TraceSmoke)return resolve();
       const script=document.createElement('script');
-      script.src='smoke-core.js';script.onload=script.onerror=()=>resolve();
+      script.src=new URL('smoke-core.js',here).href;script.onload=script.onerror=()=>resolve();
       document.head.append(script);
     });
   }

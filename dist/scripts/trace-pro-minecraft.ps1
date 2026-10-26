@@ -5,10 +5,10 @@ TRACE-PRO: локальная проверка следов Minecraft.
 Только заставка: .\trace-pro-minecraft.ps1 -AnimationOnly
 Без заставки: .\trace-pro-minecraft.ps1 -SkipIntro
 Глубина сразу: .\trace-pro-minecraft.ps1 -Preset quick|system|minecraft|full
-  quick     — процессы Java, аргументы JVM, загруженные DLL и Prefetch
-  system    — quick + службы, журналы, реестр, Defender, планировщик, корзина, hosts
-  minecraft — system + папки лаунчеров и имена классов внутри JAR
-  full      — system + все локальные диски и JAR (долго)
+  quick     — все процессы, аргументы JVM, DLL в Java и Prefetch
+  system    — quick + службы, журналы, реестр, Defender, автозапуск, корзина, hosts
+  minecraft — system + папки лаунчеров, рабочий стол, «Загрузки» и пакеты внутри JAR
+  full      — system + все диски и флешки с JAR (долго)
   menu      — меню выбора режима (по умолчанию)
 Ничего не удаляет и не отправляет в сеть. Отчёт сохраняется через пункт 5.
 Совпадения имён и эвристики требуют ручной проверки.
@@ -124,7 +124,7 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
             if (-not $scaledRows.ContainsKey($sy)) {
                 $line = [Text.StringBuilder]::new($canvasW + 8)
                 if ($UseAnsi) {
-                    $code = if ($sy -lt 2 -or $sy -ge 16) { '31' } else { '91' }
+                    $code = if ($sy -lt 2 -or $sy -ge 16) { '90' } else { '37' }
                     [void]$line.Append($esc + '[' + $code + 'm')
                 }
                 [void]$line.Append(' ' * $padX)
@@ -259,7 +259,7 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
         Write-Host "  [*] Привилегии: Администратор (некоторые источники всё равно могут быть недоступны)`n" -ForegroundColor Green
     }
 
-    # База читов, инджектов, модов, клинеров и автокликеров (2024-2026)
+    # База читов, инджектов, модов, программ для очистки следов и автокликеров (2024-2026)
     $cheatKeywords = @(
         # СНГ Анархия / FunTime / HolyWorld / ReallyWorld
         'nursultan', 'nurik', 'expensive', 'ex3', 'celestial', 'wild client', 'wildclient',
@@ -273,14 +273,14 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
         'vape', 'vape v4', 'vapelite', 'drip', 'driplite', 'slinky', 'juul', 'kura',
         'raven', 'raven b+', 'raven bplus', 'raven xd', 'weave', 'neko', 'entropy',
         'dream', 'lowkey', 'whiteout', 'rise 6', 'rise client', 'tenacity', 'augustus',
-        'liquidbounce', 'fdpclient', 'fdp client', 'meteor', 'rusherhack', 'future client',
+        'liquidbounce', 'fdpclient', 'fdp client', 'meteor', 'meteor client', 'rusherhack', 'future client',
         'aristois', 'sapphire', 'haru', 'doomsday', 'prestige', 'crypt', 'antic',
 
         # Кликеры и макросы
         'autoclicker', 'mango clicker', 'ghostclicker', 'lunarclicker', 'viper clicker',
         'echo clicker', 'bape', 'opautoclicker', 'fastclicker', 'auto-clicker',
 
-        # Клинеры и утилиты сокрытия следов
+        # Программы для очистки следов и системные утилиты (утилиты — слабые совпадения)
         'echocleaner', 'oceancleaner', 'paladin', 'usnwipe', 'eventcleaner', 'recentcleaner',
         'shellbagscleaner', 'usbdeview', 'winprefetchview', 'processhacker', 'systeminformer',
         'cheatengine', 'x64dbg', 'dnspy',
@@ -290,17 +290,22 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
         'novoline', 'hyperium', 'matcha client', 'matchaclient', 'flux client', 'fluxclient',
         'wave client', 'waveclient', 'aurora client', 'yesclient', 'yes client',
         'atomic client', 'atomicclient', 'wither client', 'witherclient', 'zenith client',
-        'zenithclient', 'venom client', 'venomclient', 'aces', 'watermark remover',
+        'zenithclient', 'venom client', 'venomclient', 'watermark remover',
         'spoofer', 'hwid spoofer', 'hwidspoofer'
     )
 
-    # Общие слова и легитимные утилиты: совпадение с ними — находка низкой важности.
+    # Общие слова, имена, другие программы и игры, а также системные утилиты: совпадение с ними —
+    # находка низкой важности, и ищутся они только отдельным словом.
     $weakKeywords = @(
-        'crypt', 'dream', 'impact', 'vega', 'rockstar', 'excellent', 'paladin', 'processhacker',
-        'systeminformer', 'dnspy', 'x64dbg', 'usbdeview', 'winprefetchview', 'hyperium'
+        'nurik', 'ex3', 'excellent', 'minced', 'vega', 'avalon', 'impact', 'rockstar', 'nocturnal',
+        'vape', 'drip', 'slinky', 'juul', 'kura', 'raven', 'weave', 'neko', 'entropy', 'dream', 'lowkey',
+        'whiteout', 'tenacity', 'augustus', 'meteor', 'sapphire', 'haru', 'doomsday', 'prestige', 'crypt',
+        'antic', 'bape', 'paladin', 'usbdeview', 'winprefetchview', 'processhacker', 'systeminformer',
+        'x64dbg', 'dnspy', 'hyperium', 'spoofer', 'watermark remover'
     )
 
-    # Сигнатуры внутренних пакетов классов для глубокого анализа .jar
+    # Пакеты внутри .jar: имя ищется как папка пакета (ru/nursultan/...), а не как имя класса,
+    # иначе класс Raven из мода Twilight Forest давал бы находку.
     $jarSignatures = @(
         'ru/nursultan', 'net/expensive', 'com/vape', 'celestial', 'deadcode',
         'akrien', 'thunderhack', 'slinky', 'liquidbounce', 'meteorclient',
@@ -311,17 +316,24 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
     $gameRoots = @(
         "$env:APPDATA\.minecraft",
         "$env:APPDATA\.tlauncher",
+        "$env:USERPROFILE\.lunarclient",
         "$env:APPDATA\.lunarclient",
+        "$env:USERPROFILE\.weave",
         "$env:APPDATA\.feather",
         "$env:APPDATA\PrismLauncher",
         "$env:APPDATA\PolyMC",
         "$env:APPDATA\MultiMC",
         "$env:APPDATA\ATLauncher",
+        "$env:APPDATA\ModrinthApp",
         "$env:LOCALAPPDATA\Programs\gdlauncher_carbon",
         "$env:USERPROFILE\curseforge\minecraft\Instances",
         "$env:USERPROFILE\Downloads",
         "$env:LOCALAPPDATA\Temp"
     )
+    # Рабочий стол и «Загрузки» берутся там, где они на самом деле (их переносят в OneDrive или на другой диск).
+    $gameRoots += [Environment]::GetFolderPath('Desktop')
+    try { $gameRoots += (New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path } catch {}
+    $gameRoots = @($gameRoots | Where-Object { $_ } | Select-Object -Unique)
 
     $hits = New-Object 'System.Collections.Generic.List[object]'
     $stats = @{ FilesChecked = 0; DirectoriesChecked = 0; JarsChecked = 0; AccessErrors = 0 }
@@ -337,33 +349,34 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
         try { & $name } catch { Add-ScanNote ($name + ': ' + $_.Exception.Message) }
     }
 
-    # Единая функция сопоставления с базой читов.
-    # Составные фразы ('vape v4', 'rise client') ищутся как есть — у них мало случайных совпадений.
-    # Однословные сигнатуры ('crypt', 'vega', 'dream'...) ищутся ТОЛЬКО как отдельный токен,
-    # а не как часть другого слова — иначе 'crypt' ложно сработает на "Encryption",
-    # "BitLocker Encrypt All Drives", "CryptoPolicyTask" и т.п. системных именах.
-    function Test-CheatKeywordMatch([string]$text, [string]$term) {
-        if ([string]::IsNullOrWhiteSpace($text) -or [string]::IsNullOrWhiteSpace($term)) { return $false }
-        if ($term.Contains(' ')) {
-            return ($text.IndexOf($term, [StringComparison]::OrdinalIgnoreCase) -ge 0)
-        }
-        $pattern = '(?<![a-zA-Z0-9])' + [regex]::Escape($term) + '(?![a-zA-Z0-9])'
-        return [regex]::IsMatch($text, $pattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-    }
+    # Одно выражение на весь список. Отличительные названия ищутся как часть имени
+    # (NursultanClient.jar, Expensive2.0.jar), общие слова — только отдельным словом:
+    # иначе 'crypt' сработал бы на Encryption и CryptoPolicyTask.
+    $strongTerms = @($cheatKeywords | Where-Object { $weakKeywords -notcontains $_ } | Sort-Object Length -Descending)
+    $weakTerms = @($cheatKeywords | Where-Object { $weakKeywords -contains $_ } | Sort-Object Length -Descending)
+    $cheatPattern = '(?<s>' + (($strongTerms | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')'
+    if ($weakTerms.Count) { $cheatPattern += '|(?<=^|[^a-z0-9])(?<w>' + (($weakTerms | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')(?=[^a-z0-9]|$)' }
+    $cheatRegex = New-Object System.Text.RegularExpressions.Regex($cheatPattern, [System.Text.RegularExpressions.RegexOptions]'IgnoreCase, Compiled')
+    $jarRegex = New-Object System.Text.RegularExpressions.Regex(('(^|/)(' + (($jarSignatures | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')/'), [System.Text.RegularExpressions.RegexOptions]'IgnoreCase, Compiled')
 
-    function Test-CheatTerm([string]$text) {
-        if ([string]::IsNullOrWhiteSpace($text)) { return $false }
-        foreach ($term in $cheatKeywords) {
-            if (Test-CheatKeywordMatch $text $term) { return $true }
+    # Возвращает найденное название или $null. Папка профиля (C:\Users\<имя>) в расчёт не берётся:
+    # имя пользователя Windows — не находка. Отличительное название важнее общего слова в том же тексте.
+    function Get-CheatMatch([string]$text) {
+        if ([string]::IsNullOrWhiteSpace($text)) { return $null }
+        $clean = $text -replace '(?i)[\\/]Users[\\/][^\\/]+', '\Users\~'
+        $weakHit = $null
+        foreach ($m in $cheatRegex.Matches($clean)) {
+            if ($m.Groups['s'].Success) { return $m.Value.ToLower() }
+            if (-not $weakHit) { $weakHit = $m.Value.ToLower() }
         }
-        return $false
+        return $weakHit
     }
 
     function Add-TraceHit([string]$source, [string]$name, [string]$path, [string]$detail, [string]$severity) {
         foreach ($term in $weakKeywords) {
             if ($name.EndsWith((': ' + $term), [StringComparison]::OrdinalIgnoreCase)) {
                 $severity = 'WARNING'
-                $detail += '; общее имя или легитимная утилита — возможное ложное совпадение'
+                $detail += '; общее слово или обычная программа — возможно ложное совпадение'
                 break
             }
         }
@@ -391,14 +404,18 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
         return -join $chars
     }
 
+    function Get-SidAccount([string]$sid) {
+        try { return (New-Object Security.Principal.SecurityIdentifier($sid)).Translate([Security.Principal.NTAccount]).Value } catch { return $sid }
+    }
+
     function Audit-ServicesAndTampering {
         Write-Host "  [*] Аудит системных служб и попыток сокрытия..." -ForegroundColor DarkCyan
         $targetServices = @('PcaSvc', 'SysMain', 'DPS', 'EventLog')
         foreach ($sName in $targetServices) {
             $srv = Get-Service -Name $sName -ErrorAction SilentlyContinue
             if ($srv) {
-                if ($srv.Status -ne 'Running') {
-                    Add-TraceHit "SERVICES" ("Служба остановлена: $sName") $srv.Name ("Статус: " + $srv.Status + "; остановка службы сама по себе не доказывает вмешательство") "WARNING"
+                if ($srv.Status -ne 'Running' -or $srv.StartType -eq 'Disabled') {
+                    Add-TraceHit "SERVICES" ("Служба остановлена или выключена: $sName") $srv.Name ("Статус: " + $srv.Status + ", запуск: " + $srv.StartType + "; остановка службы сама по себе не доказывает вмешательство") "WARNING"
                 }
             } else {
                 Add-TraceHit "SERVICES" ("Служба отсутствует: $sName") $sName "Служба не найдена или недоступна; возможны особенности конфигурации Windows" "WARNING"
@@ -431,15 +448,16 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
 
     }
 
-    # Launchers pass the session token and account ids on the Java command line. The report keeps the line (the
-    # moderator needs the -javaagent path), but never these values. The line is taken apart into arguments (quoted
-    # runs stay whole) and only options are looked at: an option whose name has token, password, passwd, secret,
-    # session, uuid, xuid, clientId, userProperties or profileProperties in it loses its value, both as
-    # "--name value" (the next argument) and as "name=value" / "name:value". Paths and other arguments are left as
-    # they are, so a word like "token" in a folder name hides nothing.
+    # Launchers pass the session token and account ids on the Java command line. The line itself is never shown or
+    # saved: only the -javaagent path, the -noverify/-Xbootclasspath options and the matched name are. Before those
+    # are cut out, the line is taken apart into arguments (quoted runs stay whole) and an option whose name has token,
+    # password, passwd, secret, session, uuid, xuid, clientId, hwid, auth, jwt, cookie, apikey, accesskey,
+    # userProperties or profileProperties in it loses its value, both as "--name value" (the next argument) and as
+    # "name=value" / "name:value". Paths and other arguments are left as they are, so a word like "token" in a folder
+    # name hides nothing.
     function Protect-CommandLine([string]$text) {
         if (-not $text) { return $text }
-        $secretName = '(?i)(token|password|passwd|secret|session|uuid|xuid|client[-_]?id|userproperties|profileproperties)'
+        $secretName = '(?i)(token|password|passwd|secret|session|uuid|xuid|client[-_]?id|hwid|auth|jwt|cookie|api[-_]?key|access[-_]?key|userproperties|profileproperties)'
         $out = New-Object System.Text.StringBuilder
         $maskNext = $false
         foreach ($m in [regex]::Matches($text, '(?:"[^"]*"|[^\s"])+|\s+')) {
@@ -465,42 +483,51 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
     }
 
     function Audit-JavaProcessesAndInjections {
-        Write-Host "  [*] Анализ запущенных процессов Minecraft и инджектов..." -ForegroundColor DarkCyan
-        $javaProcs = Get-CimInstance Win32_Process -Filter "Name LIKE 'java%.exe'" -ErrorAction Stop
-        foreach ($proc in $javaProcs) {
+        Write-Host "  [*] Анализ запущенных процессов и инджектов в Java..." -ForegroundColor DarkCyan
+        $allProcs = @(Get-CimInstance Win32_Process -ErrorAction Stop)
+        # Любой процесс, а не только Java: автокликер или программа для очистки следов работают отдельно от игры.
+        foreach ($proc in $allProcs) {
+            $procPath = [string]$proc.ExecutablePath
+            $term = Get-CheatMatch ([string]$proc.Name + ' ' + $procPath)
+            if ($term) {
+                $object = if ($procPath) { $procPath } else { [string]$proc.Name }
+                Add-TraceHit "PROCESS" ("Совпадение в запущенном процессе: " + $term) $object ("PID " + $proc.ProcessId) "HIGH"
+            }
+        }
+        foreach ($proc in @($allProcs | Where-Object { $_.Name -like 'java*.exe' })) {
             $cmd = [string]$proc.CommandLine
             if ($cmd) {
                 $safeCmd = Protect-CommandLine $cmd
-                if ($cmd -match "-javaagent:|-noverify|-Xbootclasspath") {
-                    Add-TraceHit "INJECTION" "Аргументы JVM требуют проверки" ("PID: " + $proc.ProcessId) $safeCmd "WARNING"
+                $flags = @()
+                foreach ($agent in [regex]::Matches($safeCmd, '-javaagent:(.+?\.jar)(?=[\s"=]|$)')) { $flags += ('-javaagent:' + $agent.Groups[1].Value) }
+                foreach ($flag in [regex]::Matches($safeCmd, '(?:^|[\s"])(-noverify|-Xbootclasspath[^\s"]*)')) { $flags += $flag.Groups[1].Value }
+                if ($flags.Count) {
+                    Add-TraceHit "INJECTION" "Аргументы JVM требуют проверки" ("PID: " + $proc.ProcessId) ($flags -join '; ') "WARNING"
                 }
-                foreach ($term in $cheatKeywords) {
-                    if (Test-CheatKeywordMatch $safeCmd $term) {
-                        Add-TraceHit "INJECTION" ("Совпадение в аргументах запуска: " + $term) ("PID: " + $proc.ProcessId) $safeCmd "HIGH"
-                    }
+                # Ник и идентификаторы игрока из строки не считаются: ник Raven_PvP — не находка.
+                $term = Get-CheatMatch ($safeCmd -replace '(?i)--(username|uuid|xuid)\s+\S+', '')
+                if ($term) {
+                    Add-TraceHit "INJECTION" ("Совпадение в аргументах запуска: " + $term) ("PID: " + $proc.ProcessId) "Название найдено в строке запуска Java; сама строка не выводится" "HIGH"
                 }
             }
 
             try {
                 $p = Get-Process -Id $proc.ProcessId -ErrorAction Stop
-                $modules = @($p.Modules)
+                # Метод, а не свойство: исключение внутри свойства PowerShell превращает в пустое значение без ошибки.
+                $modules = @($p.get_Modules())
             } catch {
-                Add-ScanNote ("Модули Java PID $($proc.ProcessId): " + $_.Exception.Message)
+                Add-ScanNote ("Модули Java PID $($proc.ProcessId) не прочитаны: " + $_.Exception.Message)
                 continue
             }
-            if ($modules) {
-                foreach ($mod in $modules) {
-                    $modPath = [string]$mod.FileName
-                    if ($modPath) {
-                        if ($modPath -match "\\(AppData\\Local\\Temp|Downloads)\\" -and $modPath.EndsWith(".dll", [StringComparison]::OrdinalIgnoreCase)) {
-                            Add-TraceHit "INJECTION" "DLL подгружена из Temp/Downloads" ("PID " + $proc.ProcessId) $modPath "WARNING"
-                        }
-                        foreach ($term in $cheatKeywords) {
-                            if ((Test-CheatKeywordMatch $mod.ModuleName $term) -or (Test-CheatKeywordMatch $modPath $term)) {
-                                Add-TraceHit "INJECTION" ("Совпадение в имени DLL Java: " + $term) ("PID " + $proc.ProcessId) $modPath "HIGH"
-                            }
-                        }
-                    }
+            foreach ($mod in $modules) {
+                $modPath = [string]$mod.FileName
+                if (-not $modPath) { continue }
+                if ($modPath -match "\\(AppData\\Local\\Temp|Downloads)\\" -and $modPath.EndsWith(".dll", [StringComparison]::OrdinalIgnoreCase)) {
+                    Add-TraceHit "INJECTION" "DLL подгружена из Temp/Downloads" ("PID " + $proc.ProcessId) $modPath "WARNING"
+                }
+                $term = Get-CheatMatch $modPath
+                if ($term) {
+                    Add-TraceHit "INJECTION" ("Совпадение в имени DLL Java: " + $term) ("PID " + $proc.ProcessId) $modPath "HIGH"
                 }
             }
         }
@@ -508,63 +535,44 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
 
     function Audit-RegistryTraces {
         Write-Host "  [*] Сверка реестра Windows (BAM, UserAssist, RunMRU, AppCompat, MuiCache)..." -ForegroundColor DarkCyan
-        
-        # BAM / DAM (Запуск исполняемых файлов на уровне ядра)
-        $bamKeys = @(
-            "HKLM:\SYSTEM\CurrentControlSet\Services\bam\State\UserSettings",
-            "HKLM:\SYSTEM\CurrentControlSet\Services\dam\State\UserSettings"
-        )
-        foreach ($base in $bamKeys) {
-            if (Test-Path $base) {
-                $users = Get-ChildItem -Path $base -ErrorAction Stop
-                foreach ($userKey in $users) {
-                    $props = (Get-ItemProperty -Path $userKey.PSPath -ErrorAction Stop).PSObject.Properties
-                    foreach ($prop in $props) {
-                        if ($prop.Name -like 'PS*') { continue }
-                        $exe = [string]$prop.Name
-                        foreach ($term in $cheatKeywords) {
-                            if (Test-CheatKeywordMatch $exe $term) {
-                                Add-TraceHit "BAM_REGISTRY" ("Запуск через ядро: " + $term) $exe "След в BAM/DAM реестре" "HIGH"
-                            }
-                        }
-                    }
+
+        # BAM / DAM (запуск исполняемых файлов на уровне ядра). Без прав администратора ключ закрыт:
+        # это не должно останавливать остальные разделы реестра.
+        foreach ($base in @('HKLM:\SYSTEM\CurrentControlSet\Services\bam\State\UserSettings', 'HKLM:\SYSTEM\CurrentControlSet\Services\dam\State\UserSettings')) {
+            if (-not (Test-Path -LiteralPath $base)) { continue }
+            try { $users = @(Get-ChildItem -LiteralPath $base -ErrorAction Stop) } catch { Add-ScanNote 'BAM: раздел закрыт, нужны права администратора.'; continue }
+            foreach ($userKey in $users) {
+                $account = Get-SidAccount $userKey.PSChildName
+                foreach ($exe in $userKey.GetValueNames()) {
+                    $term = Get-CheatMatch $exe
+                    if (-not $term) { continue }
+                    $value = $userKey.GetValue($exe)
+                    $when = ''
+                    if ($value -is [byte[]] -and $value.Length -ge 8) { $when = '; запуск ' + [DateTime]::FromFileTime([BitConverter]::ToInt64($value, 0)).ToString('dd.MM.yyyy HH:mm') }
+                    Add-TraceHit "BAM_REGISTRY" ("Запуск через ядро: " + $term) $exe ("След в BAM/DAM, учётная запись " + $account + $when) "HIGH"
                 }
             }
         }
 
-        # UserAssist (История запуска из GUI Проводника, закодированная в ROT13)
-        $uaPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist"
-        if (Test-Path $uaPath) {
-            $guids = Get-ChildItem -Path $uaPath -ErrorAction Stop
-            foreach ($g in $guids) {
-                $countKey = Join-Path $g.PSPath "Count"
-                if (Test-Path $countKey) {
-                    $props = (Get-ItemProperty -Path $countKey -ErrorAction Stop).PSObject.Properties
-                    foreach ($prop in $props) {
-                        if ($prop.Name -like 'PS*') { continue }
-                        $decoded = Convert-Rot13 $prop.Name
-                        foreach ($term in $cheatKeywords) {
-                            if (Test-CheatKeywordMatch $decoded $term) {
-                                Add-TraceHit "USERASSIST" ("Запуск из GUI: " + $term) $decoded "Декодировано из UserAssist (ROT13)" "HIGH"
-                            }
-                        }
-                    }
-                }
+        # UserAssist (история запуска из Проводника, закодированная в ROT13)
+        foreach ($g in @(Get-ChildItem -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist' -ErrorAction SilentlyContinue)) {
+            $countKey = $g.OpenSubKey('Count')
+            if (-not $countKey) { continue }
+            foreach ($name in $countKey.GetValueNames()) {
+                $decoded = Convert-Rot13 $name
+                $term = Get-CheatMatch $decoded
+                if ($term) { Add-TraceHit "USERASSIST" ("Запуск из GUI: " + $term) $decoded "Декодировано из UserAssist (ROT13)" "HIGH" }
             }
         }
 
-        # RunMRU (История ввода в окно Win + R)
-        $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU"
-        if (Test-Path $runKey) {
-            $props = (Get-ItemProperty -Path $runKey -ErrorAction Stop).PSObject.Properties
-            foreach ($p in $props) {
-                if ($p.Name -like 'PS*' -or $p.Name -eq 'MRUList') { continue }
-                $val = [string]$p.Value
-                foreach ($term in $cheatKeywords) {
-                    if (Test-CheatKeywordMatch $val $term) {
-                        Add-TraceHit "RUN_MRU" ("Команда Win+R: " + $term) $val "История окна Выполнить" "HIGH"
-                    }
-                }
+        # RunMRU (история ввода в окно Win + R)
+        $runKey = Get-Item -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU' -ErrorAction SilentlyContinue
+        if ($runKey) {
+            foreach ($name in $runKey.GetValueNames()) {
+                if ($name -eq 'MRUList') { continue }
+                $val = [string]$runKey.GetValue($name)
+                $term = Get-CheatMatch $val
+                if ($term) { Add-TraceHit "RUN_MRU" ("Команда Win+R: " + $term) $val "История окна Выполнить" "HIGH" }
             }
         }
 
@@ -578,41 +586,35 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
             if (-not $key) { continue }
             foreach ($valueName in $key.GetValueNames()) {
                 $exe = $valueName -replace '\.(FriendlyAppName|ApplicationCompany)$', ''
-                foreach ($term in $cheatKeywords) {
-                    if (Test-CheatKeywordMatch $exe $term) {
-                        Add-TraceHit $list.Source ("Запускавшийся EXE: " + $term) $exe "Путь из истории запуска программ" "HIGH"
-                    }
-                }
+                $term = Get-CheatMatch $exe
+                if ($term) { Add-TraceHit $list.Source ("Запускавшийся EXE: " + $term) $exe "Путь из истории запуска программ" "HIGH" }
             }
         }
     }
 
     function Audit-DefenderExclusions {
-        Write-Host "  [*] Проверка исключений Windows Defender (сокрытие от антивируса)..." -ForegroundColor DarkCyan
+        Write-Host "  [*] Проверка Windows Defender: исключения и защита в реальном времени..." -ForegroundColor DarkCyan
         try {
             $prefs = Get-MpPreference -ErrorAction Stop
-            if ($prefs -and $prefs.ExclusionPath) {
-                foreach ($excl in $prefs.ExclusionPath) {
-                    $isKeywordHit = $false
-                    foreach ($term in $cheatKeywords) {
-                        if (Test-CheatKeywordMatch $excl $term) {
-                            Add-TraceHit "DEFENDER" ("Исключение AV совпадает с читом: " + $term) $excl "Путь исключён из проверки Defender" "HIGH"
-                            $isKeywordHit = $true
-                        }
-                    }
-                    if (-not $isKeywordHit) {
+            if (-not $isAdmin) {
+                # Без прав администратора Defender вместо списка отдаёт строку N/A; это не исключение.
+                Add-ScanNote 'Defender: исключения видны только администратору.'
+            } else {
+                foreach ($excl in @($prefs.ExclusionPath) + @($prefs.ExclusionProcess) + @($prefs.ExclusionExtension)) {
+                    if (-not $excl -or $excl -like 'N/A*') { continue }
+                    $term = Get-CheatMatch $excl
+                    if ($term) {
+                        Add-TraceHit "DEFENDER" ("Исключение AV совпадает с читом: " + $term) $excl "Путь исключён из проверки Defender" "HIGH"
+                    } else {
                         Add-TraceHit "DEFENDER" "Обнаружено исключение антивируса" $excl "Требует ручной проверки: не связано с известной сигнатурой" "WARNING"
                     }
                 }
             }
-            if ($prefs -and $prefs.ExclusionProcess) {
-                foreach ($excl in $prefs.ExclusionProcess) {
-                    foreach ($term in $cheatKeywords) {
-                        if (Test-CheatKeywordMatch $excl $term) {
-                            Add-TraceHit "DEFENDER" ("Процесс-исключение совпадает с читом: " + $term) $excl "Процесс исключён из проверки Defender" "HIGH"
-                        }
-                    }
-                }
+            $status = Get-MpComputerStatus -ErrorAction SilentlyContinue
+            if ($status -and $status.AMRunningMode -and $status.AMRunningMode -ne 'Normal') {
+                Add-ScanNote ('Defender в режиме ' + $status.AMRunningMode + ': компьютер защищает другой антивирус.')
+            } elseif ($status -and -not $status.RealTimeProtectionEnabled) {
+                Add-TraceHit "DEFENDER" "Защита в реальном времени выключена" 'Microsoft Defender' "Выясните, кто и когда её выключил" "WARNING"
             }
         } catch {
             Add-ScanNote ('Defender: ' + $_.Exception.Message)
@@ -620,26 +622,35 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
     }
 
     function Audit-ScheduledTasks {
-        Write-Host "  [*] Аудит автозадач планировщика (механизмы автозапуска)..." -ForegroundColor DarkCyan
+        Write-Host "  [*] Автозапуск: планировщик, разделы Run и папки автозагрузки..." -ForegroundColor DarkCyan
         try {
-            $tasks = Get-ScheduledTask -ErrorAction Stop
-            foreach ($task in $tasks) {
-
+            foreach ($task in @(Get-ScheduledTask -ErrorAction Stop)) {
                 $taskName = [string]$task.TaskName
-                $actions = $task.Actions
-                foreach ($action in $actions) {
+                foreach ($action in @($task.Actions)) {
                     $exec = [string]$action.Execute
                     $actionArgs = [string]$action.Arguments
-                    $combined = "$taskName $exec $actionArgs"
-                    foreach ($term in $cheatKeywords) {
-                        if (Test-CheatKeywordMatch $combined $term) {
-                            Add-TraceHit "SCHEDULED_TASK" ("Совпадение в автозадаче: " + $term) ($task.TaskPath + $taskName) ("Команда: $exec $actionArgs") "HIGH"
-                        }
-                    }
+                    $term = Get-CheatMatch "$taskName $exec $actionArgs"
+                    if ($term) { Add-TraceHit "SCHEDULED_TASK" ("Совпадение в автозадаче: " + $term) ($task.TaskPath + $taskName) ("Команда: $exec $actionArgs") "HIGH" }
                 }
             }
         } catch {
             Add-ScanNote ('Планировщик: ' + $_.Exception.Message)
+        }
+        foreach ($runPath in @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Run', 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run', 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run')) {
+            $key = Get-Item -LiteralPath $runPath -ErrorAction SilentlyContinue
+            if (-not $key) { continue }
+            foreach ($name in $key.GetValueNames()) {
+                $value = [string]$key.GetValue($name)
+                $term = Get-CheatMatch ($name + ' ' + $value)
+                if ($term) { Add-TraceHit "AUTORUN" ("Совпадение в разделе Run: " + $term) $value ("Значение " + $name + " в " + $runPath) "HIGH" }
+            }
+        }
+        foreach ($dir in @([Environment]::GetFolderPath('Startup'), [Environment]::GetFolderPath('CommonStartup'))) {
+            if (-not $dir) { continue }
+            foreach ($file in @(Get-ChildItem -LiteralPath $dir -Force -ErrorAction SilentlyContinue)) {
+                $term = Get-CheatMatch $file.Name
+                if ($term) { Add-TraceHit "AUTORUN" ("Совпадение в автозагрузке: " + $term) $file.FullName "Ярлык или файл в папке автозагрузки" "HIGH" }
+            }
         }
     }
 
@@ -652,11 +663,10 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
             if ($recycleBin) {
                 foreach ($item in $recycleBin.Items()) {
                     $itemName = [string]$item.Name
-                    foreach ($term in $cheatKeywords) {
-                        if (Test-CheatKeywordMatch $itemName $term) {
-                            $delDate = try { $recycleBin.GetDetailsOf($item, 2) } catch { "неизвестно" }
-                            Add-TraceHit "RECYCLE_BIN" ("Совпадение в имени удалённого файла: " + $term) $itemName ("Дата удаления: " + $delDate) "HIGH"
-                        }
+                    $term = Get-CheatMatch $itemName
+                    if ($term) {
+                        $delDate = try { $recycleBin.GetDetailsOf($item, 2) -replace '[\u200e\u200f]', '' } catch { "неизвестно" }
+                        Add-TraceHit "RECYCLE_BIN" ("Совпадение в имени удалённого файла: " + $term) $itemName ("Дата удаления: " + $delDate) "HIGH"
                     }
                 }
             }
@@ -669,44 +679,45 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
     }
 
     function Audit-HostsFile {
-        Write-Host "  [*] Проверка файла hosts (блокировка телеметрии античит-систем)..." -ForegroundColor DarkCyan
+        Write-Host "  [*] Проверка файла hosts (перенаправленные адреса)..." -ForegroundColor DarkCyan
         $acDomainMarkers = @('anticheat', 'grim', 'vulcan', 'polar', 'negativity', 'spartan', 'intave', 'matrix', 'verus', 'aac')
+        $markerRegex = '(?i)(?<![a-z0-9])(' + ($acDomainMarkers -join '|') + ')(?![a-z0-9])'
         $hostsPath = Join-Path $env:WINDIR "System32\drivers\etc\hosts"
-        if (Test-Path -LiteralPath $hostsPath) {
-            $lines = Get-Content -LiteralPath $hostsPath -ErrorAction SilentlyContinue
-            foreach ($line in $lines) {
-                $trimmed = $line.Trim()
-                if ($trimmed.StartsWith('#') -or [string]::IsNullOrWhiteSpace($trimmed)) { continue }
-                if ($trimmed -match '^(0\.0\.0\.0|127\.0\.0\.1)\s+(\S+)') {
-                    $blockedHost = $Matches[2]
-                    foreach ($marker in $acDomainMarkers) {
-                        if (Test-CheatKeywordMatch $blockedHost $marker) {
-                            Add-TraceHit "HOSTS_TAMPERING" ("Маркер в перенаправленном домене: " + $marker) $blockedHost "Совпадение слова в hosts; принадлежность домена античиту не установлена" "WARNING"
-                        }
-                    }
-                }
+        foreach ($line in @(Get-Content -LiteralPath $hostsPath -ErrorAction SilentlyContinue)) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed -or $trimmed.StartsWith('#') -or $trimmed -match '\slocalhost$') { continue }
+            # Каждая действующая строка показывается; слово античита в домене делает её заметнее.
+            if ($trimmed -match $markerRegex) {
+                Add-TraceHit "HOSTS_TAMPERING" ("Маркер в перенаправленном домене: " + $Matches[1].ToLower()) $trimmed "Совпадение слова в hosts; принадлежность домена античиту не установлена" "WARNING"
+            } else {
+                Add-TraceHit "HOSTS" "Перенаправленный адрес" $trimmed "Проверьте, чей это домен" "WARNING"
             }
         }
     }
 
     function Audit-PrefetchDirectory {
         Write-Host "  [*] Сканирование кэша Prefetch..." -ForegroundColor DarkCyan
+        $prefetchMode = (Get-ItemProperty -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters' -ErrorAction SilentlyContinue).EnablePrefetcher
+        if ($prefetchMode -eq 0) { Add-TraceHit "PREFETCH" "Prefetch выключен" "EnablePrefetcher = 0" "Запись Prefetch выключена в реестре" "WARNING" }
         $pfFolder = Join-Path $env:WINDIR "Prefetch"
-        if (Test-Path $pfFolder) {
-            $files = Get-ChildItem -LiteralPath $pfFolder -Filter "*.pf" -ErrorAction Stop
-            foreach ($file in $files) {
-                foreach ($term in $cheatKeywords) {
-                    if (Test-CheatKeywordMatch $file.Name $term) {
-                        Add-TraceHit "PREFETCH" ("Файл запуска: " + $term) $file.FullName ("Время изменения: " + $file.LastWriteTime.ToString('dd.MM.yyyy HH:mm:ss')) "HIGH"
-                    }
-                }
-            }
+        try { $files = @(Get-ChildItem -LiteralPath $pfFolder -Filter "*.pf" -ErrorAction Stop) } catch { Add-ScanNote 'Prefetch: папка закрыта, нужны права администратора.'; return }
+        if ($files.Count -lt 30) {
+            Add-TraceHit "PREFETCH" "Prefetch почти пуст" $pfFolder ("Файлов: " + $files.Count + "; Prefetch могли очистить, проверьте время самого старого файла") "WARNING"
+        }
+        foreach ($file in $files) {
+            $term = Get-CheatMatch $file.Name
+            if ($term) { Add-TraceHit "PREFETCH" ("Файл запуска: " + $term) $file.FullName ("Время изменения: " + $file.LastWriteTime.ToString('dd.MM.yyyy HH:mm:ss')) "HIGH" }
         }
     }
 
     function Audit-JarFile([IO.FileInfo]$jar) {
         if ($jar.Length -gt 268435456) {
             Add-ScanNote ('JAR больше 256 МБ пропущен: ' + $jar.FullName)
+            return
+        }
+        # Файл только в облаке OneDrive: открытие скачало бы его из сети.
+        if ($jar.Attributes -band 0x441000) {
+            Add-ScanNote ('JAR лежит только в облаке и не скачивался: ' + $jar.FullName)
             return
         }
         $zip = $null
@@ -722,11 +733,9 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
                     break
                 }
                 if (-not $entry.FullName.EndsWith('.class', [StringComparison]::OrdinalIgnoreCase)) { continue }
-                foreach ($sig in $jarSignatures) {
-                    if (-not $found.Contains($sig) -and $entry.FullName -match ('(?i)(^|/)' + [regex]::Escape($sig) + '(/|\$|\.class$)')) {
-                        [void]$found.Add($sig)
-                        Add-TraceHit 'DEEP_JAR' ('Совпадение пакета/класса: ' + $sig) $jar.FullName ('Запись: ' + $entry.FullName + '; проверяются имена классов, не поведение программы') 'HIGH'
-                    }
+                $m = $jarRegex.Match($entry.FullName)
+                if ($m.Success -and $found.Add($m.Groups[2].Value)) {
+                    Add-TraceHit 'DEEP_JAR' ('Совпадение пакета: ' + $m.Groups[2].Value.ToLower()) $jar.FullName ('Запись: ' + $entry.FullName + '; проверяются имена пакетов, не поведение программы') 'HIGH'
                 }
             }
         } catch {
@@ -760,18 +769,16 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
                     Write-Progress -Id 1 -Activity 'TRACE-PRO: проверка' -Status ("Файлов: $($stats.FilesChecked) | JAR: $($stats.JarsChecked) | Находок: $($hits.Count) | $folder")
                 }
                 $childErrors = @()
-                Get-ChildItem -LiteralPath $folder -Force -ErrorAction SilentlyContinue -ErrorVariable childErrors | ForEach-Object {
-                    $item = $_
-                    if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or (Test-ShouldSkipPath $item.FullName)) { return }
-                    if ($item.PSIsContainer) { $pending.Push($item.FullName) } else { $stats.FilesChecked++ }
+                foreach ($item in @(Get-ChildItem -LiteralPath $folder -Force -ErrorAction SilentlyContinue -ErrorVariable childErrors)) {
+                    # Имя проверяется у всего, в том числе у ссылок и точек соединения; внутрь ссылок обход не заходит.
                     # Имя, а не полный путь: имя родительской папки не порождает тысячи дублей.
-                    foreach ($term in $cheatKeywords) {
-                        if (Test-CheatKeywordMatch $item.Name $term) {
-                            $sev = if ($item.Extension -in @('.jar','.exe','.dll','.bat','.cmd')) { 'HIGH' } else { 'WARNING' }
-                            Add-TraceHit 'FILE' ('Совпадение в имени: ' + $term) $item.FullName ('Изменён: ' + $item.LastWriteTime.ToString('dd.MM.yyyy HH:mm:ss')) $sev
-                            break
-                        }
+                    $term = Get-CheatMatch $item.Name
+                    if ($term) {
+                        $sev = if ($item.Extension -in @('.jar','.exe','.dll','.bat','.cmd')) { 'HIGH' } else { 'WARNING' }
+                        Add-TraceHit 'FILE' ('Совпадение в имени: ' + $term) $item.FullName ('Изменён: ' + $item.LastWriteTime.ToString('dd.MM.yyyy HH:mm:ss')) $sev
                     }
+                    if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or (Test-ShouldSkipPath $item.FullName)) { continue }
+                    if ($item.PSIsContainer) { $pending.Push($item.FullName) } else { $stats.FilesChecked++ }
                     if ($DeepJar -and -not $item.PSIsContainer -and $item.Extension -ieq '.jar') { Audit-JarFile $item }
                 }
                 $stats.AccessErrors += $childErrors.Count
@@ -877,12 +884,12 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
             Write-Host ('  [*] Глубина проверки: ' + ([string]$Preset).ToUpper() + ' — запуск без меню.') -ForegroundColor DarkCyan
         } else {
             Write-Host '  ┌──────────── TRACE-PRO / РЕЖИМ ПРОВЕРКИ ────────────┐' -ForegroundColor DarkGray
-            Write-Host '  │ 1  Экспресс-аудит системы                           │'
-            Write-Host '  │ 2  Minecraft: система, файлы и содержимое JAR       │'
-            Write-Host '  │ 3  Локальные диски: система, файлы и JAR            │'
-            Write-Host '  │ 4  Только выбранная папка: файлы и JAR              │'
-            Write-Host '  │ 5  Сохранить последний отчёт (JSON / CSV)           │'
-            Write-Host '  │ 0  Выход                                          │'
+            Write-Host '  │ 1  Экспресс-аудит системы                          │'
+            Write-Host '  │ 2  Minecraft: система, файлы и содержимое JAR      │'
+            Write-Host '  │ 3  Все диски: система, файлы и JAR                 │'
+            Write-Host '  │ 4  Только выбранная папка: файлы и JAR             │'
+            Write-Host '  │ 5  Сохранить последний отчёт (JSON / CSV)          │'
+            Write-Host '  │ 0  Выход                                           │'
             Write-Host '  └────────────────────────────────────────────────────┘' -ForegroundColor DarkGray
             $choice = ([string](Read-Host '  TRACE-PRO > [0-5]')).Trim()
         }
@@ -907,20 +914,26 @@ param([switch]$SkipIntro, [switch]$AnimationOnly, [ValidateSet('menu','quick','s
                 Invoke-TraceAudit $audit
             }
         }
+        # Ctrl+C во время обхода всё равно показывает то, что уже найдено.
+        $completed = $false
         try {
             switch ($choice) {
                 '2' { Audit-FileSystemPaths -Paths $gameRoots -DeepJar }
                 '3' {
-                    Write-Host '  Полный обход может занять время. Остановка: Ctrl+C.' -ForegroundColor Yellow
-                    $fixedDrives = @(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' -ErrorAction Stop | ForEach-Object { $_.DeviceID + '\' })
-                    Audit-FileSystemPaths -Paths $fixedDrives -DeepJar
+                    Write-Host '  Полный обход может занять время. Остановка: Ctrl+C, найденное до остановки будет показано.' -ForegroundColor Yellow
+                    # Встроенные диски и флешки.
+                    $drives = @([IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and ($_.DriveType -eq 'Fixed' -or $_.DriveType -eq 'Removable') } | ForEach-Object { $_.RootDirectory.FullName })
+                    Audit-FileSystemPaths -Paths $drives -DeepJar
                 }
                 '4' { Audit-FileSystemPaths -Paths @($customPath) -DeepJar }
             }
-        } catch { Add-ScanNote ('Сканирование прервано ошибкой: ' + $_.Exception.Message) }
-        $clock.Stop()
-        $scopeNames = @{'Q'='БЫСТРАЯ ПРОВЕРКА'; '1'='ЭКСПРЕСС-АУДИТ'; '2'='MINECRAFT'; '3'='ЛОКАЛЬНЫЕ ДИСКИ'; '4'=$customPath}
-        Show-TraceResults $scopeNames[$choice] $clock.Elapsed
+            $completed = $true
+        } catch { Add-ScanNote ('Сканирование прервано ошибкой: ' + $_.Exception.Message) } finally {
+            $clock.Stop()
+            if (-not $completed) { Add-ScanNote 'Проверка остановлена до конца: показано только то, что найдено к этому моменту.' }
+            $scopeNames = @{'Q'='БЫСТРАЯ ПРОВЕРКА'; '1'='ЭКСПРЕСС-АУДИТ'; '2'='MINECRAFT'; '3'='ВСЕ ДИСКИ'; '4'=$customPath}
+            Show-TraceResults $scopeNames[$choice] $clock.Elapsed
+        }
         if ($choice -eq 'Q') { Write-Host '  Быстрая проверка не читает реестр, журналы и файлы. Для большей глубины выберите 1–3 в меню.' -ForegroundColor DarkYellow }
     }
 

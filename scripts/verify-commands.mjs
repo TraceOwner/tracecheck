@@ -35,25 +35,25 @@ try {
           if(withArt!==intro)fail(`${label}: art does not follow the copy`);
           if(fileRun){
             const file=fileFor(gameKey);
-            if(!text.startsWith('powershell -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\\Downloads\\'+file+'"'))fail(`${label}: does not run ${file}`);
+            if(!text.includes(`-Filter '${file.replace(/\.ps1$/,'')}*.ps1'`)||!text.includes("NameSpace('shell:Downloads')"))fail(`${label}: does not look for ${file} in Downloads`);
             if(!existsSync(resolve('dist/scripts',file)))fail(`${label}: dist/scripts/${file} is missing`);
-            continue;
           }
           let body=text;
           if(method==='cmd'){
-            const inner=text.match(/^powershell -NoProfile -Command "(.*)"$/s)?.[1];
+            const inner=text.match(/^powershell -NoProfile (?:-ExecutionPolicy Bypass )?-Command "(.*)"$/s)?.[1];
             if(inner===undefined)fail(`${label}: not a powershell -Command line`);
             if(/[\r\n]/.test(text))fail(`${label}: more than one line; cmd.exe runs each pasted line on its own`);
             if(text.length>8191)fail(`${label}: ${text.length} characters, cmd.exe takes 8191`);
             if(inner.includes('"'))fail(`${label}: a double quote ends the cmd.exe argument`);
             if(inner.includes('%'))fail(`${label}: % is expanded by cmd.exe`);
+            if(inner.includes('!'))fail(`${label}: ! is eaten by cmd.exe when delayed expansion is on`);
             body=inner;
           }
-          if(!tracePro&&!game.terms().every(term=>body.includes(`'${term.replaceAll("'","''")}'`)))fail(`${label}: names missing`);
+          if(!tracePro&&!fileRun&&!game.terms().every(term=>body.includes(`'${term.replaceAll("'","''")}'`)))fail(`${label}: names missing`);
           writeFileSync(join(parseDir,`${label}.ps1`),'\ufeff'+body,'utf8');count++;
           // The one-line CMD text must parse into the same tree as the PowerShell tab: a misplaced ; still parses
           // (before else it makes "else" a command), so only the trees show it.
-          if(method==='cmd'){
+          if(method==='cmd'&&!fileRun){
             writeFileSync(join(pairDir,`${label}.cmd.ps1`),'\ufeff'+body,'utf8');
             writeFileSync(join(pairDir,`${label}.ps.ps1`),'\ufeff'+command(gameKey,'powershell',task,intro),'utf8');
           }
@@ -91,21 +91,43 @@ exit $bad`);
   const compared=run(['-File',compare,'-Dir',pairDir]);
   if(compared.status!==0)fail(`CMD text differs from the PowerShell tab:\n${compared.stdout}${compared.stderr}${compared.error||''}`);
 
-  // Synthetic folders: a file named after a cheat, a JAR with a cheat package inside, a JAR that is not a ZIP.
-  const fixture=join(folder,'fixture'),mods=join(fixture,'appdata','.minecraft','mods'),classes=join(folder,'classes','ru','nursultan');
-  for(const dir of [mods,classes,join(fixture,'home','Downloads'),join(fixture,'local'),join(fixture,'tmp'),join(fixture,'appdata','OsirisCS2')])mkdirSync(dir,{recursive:true});
-  writeFileSync(join(mods,'nursultan-fixture.jar'),'synthetic test fixture');
+  // Name matching, the same rules in the page commands and in TRACE-PRO: distinctive names inside longer names, common
+  // words only as a word, the Windows user folder never counts, a clear name wins over a common word in the same text.
+  const nameCases=[
+    ['NursultanClient.jar','nursultan'],['Expensive2.0.jar','expensive'],['thunderhackrecode.jar','thunderhack'],
+    ['C:\\Program Files\\War Thunder\\win64\\aces.exe',''],['C:\\Users\\Nursultan\\AppData\\Local\\Discord\\Discord.exe',''],
+    ['BitLocker Encryption','' ],['C:\\Games\\Rockstar Games\\nursultan.exe','nursultan'],['neko.png','neko'],
+    ['C:\\Program Files (x86)\\SAPPHIRE\\TRIXX\\TriXX.exe','sapphire']
+  ];
+  const pro=readFileSync(resolve('src/trace-pro-minecraft.ps1'),'utf8');
+  const proLists=pro.slice(pro.indexOf('    $cheatKeywords = @('),pro.indexOf('    $gameRoots = @('));
+  const proMatch=pro.slice(pro.indexOf('    $strongTerms = '),pro.indexOf('    function Add-TraceHit'));
+  const pageMatch=context.window.TraceCommands.coreLines('minecraft').join('\n');
+  const nameScript=writeScript('names.ps1',`${proLists}\n${proMatch}\n${pageMatch}\n${nameCases.map(([text])=>{const t=`'${text.replaceAll("'","''")}'`;return `$hits.Clear(); Find-TraceName 'x' ${t} '' ''; $page = if ($hits.Count) { ($hits[0].Detail -split '[ ,;]')[1] } else { '' }; Write-Output ([string](Get-CheatMatch ${t}) + '|' + $page)`;}).join('\n')}`);
+  const named=run(['-File',nameScript]);
+  const answers=named.stdout.trim().split(/\r?\n/);
+  if(named.status!==0||answers.length!==nameCases.length)fail(`Name cases did not run: ${named.stderr||named.stdout}`);
+  nameCases.forEach(([text,want],i)=>{ if(answers[i]!==`${want}|${want}`)fail(`Name match for ${text}: expected ${want||'nothing'} (TRACE-PRO|page), got ${answers[i]}`); });
+
+  // Synthetic folders: files named after cheats and harmless look-alikes, JARs with and without a cheat package, a JAR
+  // that is not a ZIP. Each case lists what the output must and must not contain.
+  const fixture=join(folder,'fixture'),mods=join(fixture,'appdata','.minecraft','mods');
+  const classes=join(folder,'classes','ru','nursultan'),twilight=join(folder,'twilight','twilightforest','entity','passive');
+  for(const dir of [mods,classes,twilight,join(fixture,'home','Downloads'),join(fixture,'local'),join(fixture,'tmp'),join(fixture,'appdata','OsirisCS2','configs')])mkdirSync(dir,{recursive:true});
+  for(const name of ['nursultan-fixture.jar','NursultanClient.jar','aces.exe','Encryption.dll'])writeFileSync(join(mods,name),'synthetic test fixture');
   writeFileSync(join(fixture,'home','Downloads','Neverlose Loader.exe'),'synthetic test fixture');
+  writeFileSync(join(fixture,'appdata','OsirisCS2','configs','legit.cfg'),'synthetic test fixture');
   writeFileSync(join(classes,'Main.class'),'synthetic test fixture');
-  const zip=run(['-Command',`Add-Type -AssemblyName System.IO.Compression.FileSystem; [IO.Compression.ZipFile]::CreateFromDirectory('${join(folder,'classes').replaceAll("'","''")}', '${join(mods,'renamed-mod.jar').replaceAll("'","''")}')`]);
-  if(zip.status!==0)fail(`Could not build the test JAR: ${zip.stderr}`);
+  writeFileSync(join(twilight,'Raven.class'),'synthetic test fixture');
+  const zipOf=(dir,name)=>run(['-Command',`Add-Type -AssemblyName System.IO.Compression.FileSystem; [IO.Compression.ZipFile]::CreateFromDirectory('${dir.replaceAll("'","''")}', '${join(mods,name).replaceAll("'","''")}')`]);
+  for(const [dir,name] of [[join(folder,'classes'),'renamed-mod.jar'],[join(folder,'twilight'),'twilightforest.jar']]){const zip=zipOf(dir,name);if(zip.status!==0)fail(`Could not build the test JAR: ${zip.stderr}`);}
   const env={...process.env,APPDATA:join(fixture,'appdata'),LOCALAPPDATA:join(fixture,'local'),USERPROFILE:join(fixture,'home'),TEMP:join(fixture,'tmp')};
   const cases=[
-    ['minecraft','folders','nursultan-fixture.jar'],
-    ['minecraft','jar','ru/nursultan/Main.class'],
-    ['cs2','folders','Neverlose Loader.exe']
+    ['minecraft','folders',['nursultan-fixture.jar','NursultanClient.jar'],['aces.exe','Encryption.dll']],
+    ['minecraft','jar',['ru/nursultan/Main.class'],['Raven.class','twilightforest.jar']],
+    ['cs2','folders',['Neverlose Loader.exe','OsirisCS2'],[]]
   ];
-  for(const [gameKey,task,expect] of cases){
+  for(const [gameKey,task,expect,refuse] of cases){
     for(const method of ['powershell','cmd']){
       const text=command(gameKey,method,task,false);
       const result=method==='powershell'
@@ -113,7 +135,8 @@ exit $bad`);
         :windows
           ? spawnSync('cmd.exe',['/d','/s','/c',`"${text}"`],{encoding:'utf8',timeout:120000,env,windowsVerbatimArguments:true})
           : run(['-Command',text.match(/^powershell -NoProfile -Command "(.*)"$/s)[1]],{env});
-      if(result.status!==0||!result.stdout.includes(expect))fail(`${gameKey} ${task} (${method}) did not find ${expect}:\n${result.stdout}${result.stderr}${result.error||''}`);
+      const missing=expect.filter(part=>!result.stdout.includes(part)),wrong=refuse.filter(part=>result.stdout.includes(part));
+      if(result.status!==0||missing.length||wrong.length)fail(`${gameKey} ${task} (${method}): missing ${missing.join(', ')||'-'}, wrongly found ${wrong.join(', ')||'-'}:\n${result.stdout}${result.stderr}${result.error||''}`);
     }
   }
   if(windows){
@@ -142,7 +165,7 @@ exit $bad`);
     if(/SECRET/.test(lines[i]))fail(`Secret left in: ${lines[i]}`);
     keep.forEach(part=>{ if(!lines[i].includes(part))fail(`Redaction removed "${part}": ${lines[i]}`); });
   });
-  console.log(`TRACE commands (${shell}): ${count} commands and files parsed; cmd.exe limits and the art rule checked; ${cases.length*2} synthetic scans${windows?' (CMD through cmd.exe) and the TRACE-PRO folder mode':''} found their fixtures; ${redactCases.length} redaction cases verified.`);
+  console.log(`TRACE commands (${shell}): ${count} commands and files parsed; cmd.exe limits and the art rule checked; ${nameCases.length} name cases agree in TRACE-PRO and on the page; ${cases.length*2} synthetic scans${windows?' (CMD through cmd.exe) and the TRACE-PRO folder mode':''} found their fixtures; ${redactCases.length} redaction cases verified.`);
 } finally {
   if(dirname(folder)!==tmpdir()||!basename(folder).startsWith('trace-command-check-'))throw new Error('Unsafe temporary test path');
   rmSync(folder,{recursive:true,force:true});

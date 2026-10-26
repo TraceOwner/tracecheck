@@ -91,7 +91,8 @@
       this.container = container; this.element = element; this.stretch = stretch; this.item = null; this.radius = radius;
       const spring = () => new Spring({duration, bounce, precision: .05});
       this.motion = new Motion({x: spring(), y: spring(), w: spring(), h: spring(), o: new Spring({duration: .3, precision: .002})}, v => this.paint(v));
-      new ResizeObserver(() => this.item && this.moveTo(this.item, {immediate: true})).observe(container);
+      this.cw = container.scrollWidth; this.ch = container.scrollHeight;
+      new ResizeObserver(() => { this.cw = container.scrollWidth; this.ch = container.scrollHeight; if (this.item) this.moveTo(this.item, {immediate: true}); }).observe(container);
     }
     measure(item) {
       // Layout boxes, not transformed ones: an item that is still rising or scaling into place (a list opening) would
@@ -105,6 +106,7 @@
     }
     moveTo(item, {immediate = false} = {}) {
       if (!item) return this.hide({immediate});
+      this.cw = this.container.scrollWidth; this.ch = this.container.scrollHeight;
       const springs = this.motion.springs, target = this.measure(item);
       const hidden = !this.item && springs.o.x < .05, instant = immediate || reduced();
       this.item = item;
@@ -122,7 +124,8 @@
       const s = this.motion.springs, speed = Math.hypot(s.x.v, s.y.v);
       const squash = this.stretch ? Math.min(.1, speed / 9000) : 0, grow = .86 + .14 * o;
       const [sx, sy] = Math.abs(s.x.v) > Math.abs(s.y.v) ? [1 + squash, 1 - squash * .6] : [1 - squash * .6, 1 + squash];
-      const cw = this.container.scrollWidth, ch = this.container.scrollHeight;
+      // Cached (constructor, ResizeObserver, moveTo): reading them here forced a style and layout pass on every frame.
+      const cw = this.cw, ch = this.ch;
       const W = w * grow * sx, H = h * grow * sy, L = x + (w - W) / 2, T = y + (h - H) / 2;
       const r = Math.min(this.radius ?? (H / 2), W / 2, H / 2), st = this.element.style;
       // trace.css turns these into two clips: the lens and, 1px inside it, its fill (so the rim survives clipping).
@@ -155,23 +158,21 @@
     return animation.finished.then(() => animation, () => animation);
   }
 
-  // Resolves new content like a camera pulling focus: blur, lift and opacity.
+  // Resolves new content like a camera pulling focus: blur, lift and opacity. The first keyframe holds through the
+  // stagger delay (fill backwards), so new content never shows for a moment and then vanishes into the blur.
   function materialize(nodes, {stagger = 40, delay = 0, y = 8, blur = 6} = {}) {
     [...nodes].filter(Boolean).forEach((node, i) => {
-      animate(node, [{opacity: 0, filter: `blur(${blur}px)`, transform: `translateY(${y}px)`}, {opacity: 1, filter: 'blur(0)', transform: 'none'}], {spring: 'smooth', delay: delay + i * stagger, fill: 'none'});
+      animate(node, [{opacity: 0, filter: `blur(${blur}px)`, transform: `translateY(${y}px)`}, {opacity: 1, filter: 'blur(0)', transform: 'none'}], {spring: 'smooth', delay: delay + i * stagger, fill: 'backwards'});
     });
   }
 
-  // A change of height caused by `mutate`, animated without animating height (FLIP): the layout jumps once, then the
-  // element's clip opens or closes from its old height and every element after it in the flow slides from its old
-  // place with transform. Only clip-path and transform move.
   // Everything laid out after an element, up to the body. Fixed and sticky boxes (the copy notice, the cursor tag,
   // dialogs) and hidden ones do not move when the element grows, so they are left out.
   function followers(element) {
     const list = [];
     for (let node = element; node && node !== document.body; node = node.parentElement) {
       for (let next = node.nextElementSibling; next; next = next.nextElementSibling) {
-        if (next.matches('dialog, script, template')) continue;
+        if (next.matches('dialog, script, template, .flip-spacer')) continue;
         const style = getComputedStyle(next);
         if (style.display === 'none' || style.position === 'fixed' || style.position === 'sticky') continue;
         list.push(next);
@@ -179,20 +180,76 @@
     }
     return list;
   }
-  function morphHeight(element, mutate) {
+
+  /* A change of layout caused by `mutate`, animated without animating a size (FLIP). Every box that moved, inside the
+     element (`inside`) and after it in the flow, is measured on screen before and after the change and slides from
+     where it was with the `translate` property, all on one spring. A change that lands during another one starts from
+     where things are on screen, so interrupted slides continue instead of snapping.
+     The page itself must not jump: scroll anchoring is off while the layout changes, and when the page gets shorter
+     than the place it is scrolled to, a spacer at its end keeps the scroll position and then shrinks while the window
+     scrolls up by the same amount, so the bottom of the page rides down with the content instead of being clamped. */
+  const flip = {nodes: new Map(), motion: null, spacer: null, deficit: 0, top: 0, since: 0};
+  function flipSpacer() {
+    if (!flip.spacer) {
+      flip.spacer = document.createElement('div');
+      flip.spacer.className = 'flip-spacer'; flip.spacer.setAttribute('aria-hidden', 'true');
+      flip.spacer.style.cssText = 'height:0;pointer-events:none';
+    }
+    if (!flip.spacer.isConnected) document.body.append(flip.spacer);
+    return flip.spacer;
+  }
+  function flipFrame(p) {
+    flip.nodes.forEach((delta, node) => { node.style.translate = Math.abs(delta * p) < .5 ? '' : `0 ${(delta * p).toFixed(2)}px`; });
+    if (flip.deficit) {
+      flip.spacer.style.height = `${(flip.deficit * p).toFixed(1)}px`;
+      scrollTo(scrollX, flip.top - flip.deficit * (1 - p));
+    }
+  }
+  function flipDone() {
+    flip.nodes.forEach((_, node) => { node.style.translate = ''; });
+    flip.nodes.clear();
+    if (flip.spacer) flip.spacer.style.height = '0px';
+    flip.deficit = 0;
+    root.style.overflowAnchor = '';
+    removeEventListener('wheel', flipInterrupt); removeEventListener('touchstart', flipInterrupt); removeEventListener('keydown', flipInterrupt);
+  }
+  // A wheel turn or a scrolling key during the slide: the reader takes the page back, the slide ends where it is going.
+  // The key that started the change (an arrow on the tabs) is older than the slide and does not count.
+  function flipInterrupt(event) {
+    if (event.timeStamp <= flip.since) return;
+    if (event.type === 'keydown' && (!['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key) || event.target !== document.body)) return;
+    flip.motion?.stop(); flipFrame(0); flipDone();
+  }
+  function morphHeight(element, mutate, {inside = []} = {}) {
     if (!element || reduced()) { mutate(); return; }
-    element.getAnimations().filter(a => a.id === 'trace-flip').forEach(a => a.finish());
-    const after = followers(element).filter(node => node.getBoundingClientRect().top < innerHeight * 1.5);
-    after.forEach(node => node.getAnimations().filter(a => a.id === 'trace-flip').forEach(a => a.finish()));
-    const from = element.getBoundingClientRect().height;
+    const near = node => { const box = node.getBoundingClientRect(); return box.height > 0 && box.bottom > -innerHeight * .6 && box.top < innerHeight * 1.6; };
+    const nodes = [...new Set([...inside, ...followers(element), ...flip.nodes.keys()])].filter(node => node.isConnected && near(node));
+    const before = new Map(nodes.map(node => [node, node.getBoundingClientRect().top]));
+    // Positions are taken from the screen, so whatever is still sliding is released and measured afresh after the change.
+    flip.motion?.stop();
+    flip.nodes.forEach((_, node) => { node.style.translate = ''; });
+    flip.nodes.clear();
+    const spacer = flipSpacer(), y = scrollY;
+    root.style.overflowAnchor = 'none';
+    // A tall spacer while the layout changes: the browser has nothing to clamp the scroll position to.
+    spacer.style.height = `${root.scrollHeight}px`;
     mutate();
-    const to = element.getBoundingClientRect().height, delta = from - to;
-    if (Math.abs(delta) < 2) return;
-    const options = {duration: duration('smooth'), easing: easing('smooth')};
-    const grow = to > from;
-    const clip = grow ? [{clipPath: `inset(0 0 ${(to - from).toFixed(1)}px 0)`}, {clipPath: 'inset(0 0 0 0)'}] : [{clipPath: 'inset(0 0 0 0)'}, {clipPath: 'inset(0 0 0 0)'}];
-    element.animate(clip, options).id = 'trace-flip';
-    after.forEach(node => { node.animate([{transform: `translateY(${delta.toFixed(1)}px)`}, {transform: 'none'}], options).id = 'trace-flip'; });
+    const natural = root.scrollHeight - spacer.offsetHeight;
+    const deficit = Math.max(0, Math.round(y + innerHeight - natural));
+    spacer.style.height = `${deficit}px`;
+    if (scrollY !== y) scrollTo(scrollX, y);
+    before.forEach((top, node) => {
+      if (!node.isConnected || !node.getClientRects().length) return;
+      const delta = top - node.getBoundingClientRect().top;
+      if (Math.abs(delta) >= 1) flip.nodes.set(node, delta);
+    });
+    flip.deficit = deficit; flip.top = y; flip.since = performance.now();
+    if (!flip.nodes.size && !deficit) { flipDone(); return; }
+    flip.motion ??= new Motion({p: new Spring({duration: .62, bounce: 0, precision: .001})}, ({p}) => flipFrame(p), {onRest: () => flipDone()});
+    flip.motion.springs.p.x = 1; flip.motion.springs.p.v = 0;
+    flipFrame(1);
+    addEventListener('wheel', flipInterrupt, {passive: true}); addEventListener('touchstart', flipInterrupt, {passive: true}); addEventListener('keydown', flipInterrupt);
+    flip.motion.to({p: 0});
   }
 
   // Forensic "decode": characters resolve left to right out of signal noise.
@@ -250,7 +307,7 @@
         const travel = Math.abs(goal[key] - this.motion.springs[key].x);
         config[key] = open ? [.44 + Math.min(.16, travel / 1600), .22] : [.32 + Math.min(.06, travel / 4000), .05];
       }
-      config.c = open ? [.42] : [.14];
+      config.c = open ? [.42] : [.24];
       this.motion.to({...goal, c: +open}, {config});
     }
     paint({l, t, r, b, c}) {
